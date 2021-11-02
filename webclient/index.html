@@ -6,15 +6,27 @@
 </head>
 
 <body>
+    <script src="/Packet.js"></script>
     <script>
         const server = new WebSocket("{origin}/")
 
+        server.addEventListener("open", event => {
+            console.log("Connection opened")
+
+            server.send(new Packet("connectionrequest").encode())
+        })
+
         server.addEventListener("message", event => {
-            console.log(event)
+            var message = Packet.decode(event.data)
+
+            if (message.type == "connectionaccepted") {
+                console.log("Connection accepted")
+            } else if (message.type == "connectionrejected") server.close()
+            else if (message.type == "ping") server.send(new Packet("pong").encode())
         })
 
         server.addEventListener("close", event => {
-            console.log(event)
+            console.log("Connection closed")
         })
     </script>
 </body>

@@ -1,5 +1,6 @@
 const http = require("http")
 const WebSocket = require("websocket").server
+const Packet = require("../common/Packet.js")
 
 module.exports = class Server {
     server
@@ -25,14 +26,26 @@ module.exports = class Server {
         this.httpServer.listen(this.port)
 
         this.server.on("request", (req) => {
-            console.log(req.origin, this.webServerOrigin)
-
             if (req.origin == this.webServerOrigin) req.accept()
             else req.reject(403, "Invalid request origin")
         })
 
         this.server.on("connect", (connection => {
-            console.log(connection)
+            connection.on("message", event => {
+                var message = Packet.decode(event.utf8Data)
+
+                if (message.type == "connectionrequest") {
+                    connection.send(new Packet("connectionaccepted").encode())
+
+                    connection.lastPing = new Date().getTime()
+
+                    setInterval(() => {
+                        if (new Date().getTime() - connection.lastPing > 15000) connection.close()
+
+                        connection.send(new Packet("ping").encode())
+                    }, 5000)
+                } else if (message.type == "pong") connection.lastPing = new Date().getTime()
+            })
         }))
     }
 }

@@ -20,10 +20,22 @@ module.exports = class Server {
     }
 
     start() {
-        this.server.get("*", (req, res) => {
+        this.server.get("/", (req, res) => {
             res.statusCode = 200
             res.statusMessage = "Ok"
             res.end(fs.readFileSync("./webclient/index.html").toString().replace(/{origin}/g, this.serverorigin.replace("http", "ws")))
+        })
+
+        this.server.get("/Packet.js", (req, res) => {
+            res.statusCode = 200
+            res.statusMessage = "Ok"
+            res.end(fs.readFileSync("./common/Packet.js").toString().replace(/{origin}/g, this.serverorigin.replace("http", "ws")))
+        })
+
+        this.server.get("*", (req, res) => {
+            res.statusCode = 404
+            res.statusMessage = "Not Found"
+            res.end("404 Not Found")
         })
 
         this.server.listen(this.port)

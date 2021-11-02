@@ -34,8 +34,7 @@ module.exports = class Server {
             connection.on("message", event => {
                 var message = Packet.decode(event.utf8Data)
 
-                if (message.type == "connectionrequest") connection.send(new Packet("connectionaccepted").encode())
-                else if (message.type == "display") this.server.broadcast(message.encode())
+                this.server.broadcast(message.encode())
             })
         })
     }

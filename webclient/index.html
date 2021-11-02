@@ -21,11 +21,19 @@
 
             if (message.type == "connectionaccepted") console.log("Connection accepted")
             else if (message.type == "display") {
-                if (document.getElementById("display" + message.data.id) != null) document.getElementById("display" + message.data.id).setAttribute("src", URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: 'image/jpg' })))
-                else {
+                if (document.getElementById("display" + message.data.id) != null) {
+                    document.getElementById("display" + message.data.id).style.display = "block"
+
+                    document.getElementById("display" + message.data.id).src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: 'image/jpg' }))
+                } else {
                     var image = document.createElement("img")
                     image.id = "display" + message.data.id
+                    image.style.display = "block"
                     document.body.appendChild(image)
+
+                    document.getElementById("display" + message.data.id).style.display = "none"
+
+                    document.getElementById("display" + message.data.id).src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: 'image/jpg' }))
                 }
             }
         })

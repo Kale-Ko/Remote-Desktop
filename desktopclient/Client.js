@@ -1,6 +1,8 @@
 const WebSocket = require("WebSocket").client
 const Packet = require("../common/Packet.js")
 const screenshot = require("screenshot-desktop")
+const sharp = require("sharp")
+const robot = require("robotjs")
 
 module.exports = class Client {
     serverurl
@@ -33,12 +35,16 @@ module.exports = class Client {
             })
 
             setInterval(() => {
-                screenshot.all().then(displays => {
+                screenshot.all().then(async displays => {
                     for (var index = 0; index < displays.length; index++) {
-                        connection.send(new Packet("display", { image: displays[index].toJSON(), id: index }).encode())
+                        var size = robot.getScreenSize()
+
+                        var image = await sharp(displays[index]).jpeg().resize(size.width / 2, size.height / 2).toBuffer()
+
+                        connection.send(new Packet("display", { image: image.toJSON(), id: index }).encode())
                     }
                 })
-            }, 1000 / 10)
+            }, 1000 / 5)
         })
     }
 }

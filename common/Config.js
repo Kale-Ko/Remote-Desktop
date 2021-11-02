@@ -7,6 +7,8 @@ module.exports = class Config {
     webServerPort = 80
     serverPort = 8000
 
+    enableControl = false
+
     constructor(file) {
         if (file == undefined || file == null) throw new Error('Missing paramiter "file"')
 
@@ -25,5 +27,7 @@ module.exports = class Config {
 
         this.webServerPort = config.webServerPort || this.webServerPort
         this.serverPort = config.serverPort || this.serverPort
+
+        this.enableControl = config.enableControl || false
     }
 }

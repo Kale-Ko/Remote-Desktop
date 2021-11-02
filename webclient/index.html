@@ -19,12 +19,14 @@
         server.addEventListener("message", event => {
             var message = Packet.decode(event.data)
 
-            if (message.type == "connectionaccepted") {
-                console.log("Connection accepted")
-            } else if (message.type == "connectionrejected") server.close()
-            else if (message.type == "ping") server.send(new Packet("pong").encode())
+            if (message.type == "connectionaccepted") console.log("Connection accepted")
             else if (message.type == "display") {
-                console.log("Received display")
+                if (document.getElementById("display" + message.data.id) != null) document.getElementById("display" + message.data.id).setAttribute("src", URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: 'image/jpg' })))
+                else {
+                    var image = document.createElement("img")
+                    image.id = "display" + message.data.id
+                    document.body.appendChild(image)
+                }
             }
         })
 

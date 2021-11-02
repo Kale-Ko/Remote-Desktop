@@ -16,7 +16,7 @@ module.exports = class Server {
         if (port == undefined || port == null) throw new Error('Missing paramiter "port"')
 
         this.httpServer = http.createServer((req, res) => { })
-        this.server = new WebSocket({ httpServer: this.httpServer, keepalive: false })
+        this.server = new WebSocket({ httpServer: this.httpServer, maxReceivedFrameSize: 100000000, maxReceivedMessageSize: 100000000, fragmentationThreshold: 5000000, keepaliveInterval: 5000, parseCookies: false })
         this.origin = origin
         this.webServerOrigin = webServerOrigin
         this.port = port
@@ -26,27 +26,17 @@ module.exports = class Server {
         this.httpServer.listen(this.port)
 
         this.server.on("request", (req) => {
-            if (req.origin == this.webServerOrigin) req.accept()
+            if (req.origin == this.webServerOrigin || req.origin == undefined) req.accept()
             else req.reject(403, "Invalid request origin")
         })
 
-        this.server.on("connect", (connection => {
+        this.server.on("connect", connection => {
             connection.on("message", event => {
                 var message = Packet.decode(event.utf8Data)
 
-                if (message.type == "connectionrequest") {
-                    connection.send(new Packet("connectionaccepted").encode())
-
-                    connection.lastPing = new Date().getTime()
-
-                    setInterval(() => {
-                        if (new Date().getTime() - connection.lastPing > 15000) connection.close()
-
-                        connection.send(new Packet("ping").encode())
-                    }, 5000)
-                } else if (message.type == "pong") connection.lastPing = new Date().getTime()
+                if (message.type == "connectionrequest") connection.send(new Packet("connectionaccepted").encode())
                 else if (message.type == "display") this.server.broadcast(message.encode())
             })
-        }))
+        })
     }
 }

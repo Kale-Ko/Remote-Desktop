@@ -10,6 +10,7 @@ module.exports = class Server {
 
     constructor(origin, serverorigin, port) {
         if (origin == undefined || origin == null) throw new Error('Missig paramiter "origin"')
+        if (serverorigin == undefined || serverorigin == null) throw new Error('Missig paramiter "serverorigin"')
         if (port == undefined || port == null) throw new Error('Missig paramiter "port"')
 
         this.server = express()
@@ -22,7 +23,7 @@ module.exports = class Server {
         this.server.get("*", (req, res) => {
             res.statusCode = 200
             res.statusMessage = "Ok"
-            res.end(fs.readFileSync("./webclient/index.html").toString().replace(/{origin}/g, this.serverorigin))
+            res.end(fs.readFileSync("./webclient/index.html").toString().replace(/{origin}/g, this.serverorigin.replace("http", "ws")))
         })
 
         this.server.listen(this.port)

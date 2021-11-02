@@ -7,7 +7,7 @@
 
 <body>
     <script>
-        const server = new WebSocket("wss://{origin}/")
+        const server = new WebSocket("{origin}/")
 
         server.addEventListener("message", event => {
             console.log(event)

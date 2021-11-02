@@ -60,35 +60,40 @@ module.exports = class Client {
             sharp("./assets/mouse.png").toBuffer().then(image => {
                 var size = imageSize(image)
 
-                sharp(image).png({ compressionLevel: 9, quality: 1 }).resize(Math.floor(size.width / 4), Math.floor(size.height / 4)).toBuffer().then(mouse => {
-                    var lastupdate = {}
+                sharp(image)
+                    .png({ compressionLevel: 9, quality: 1 })
+                    .resize(Math.floor(size.width / 4), Math.floor(size.height / 4))
+                    .sharpen()
+                    .normalize()
+                    .toBuffer().then(mouse => {
+                        var lastupdate = {}
 
-                    setInterval(() => {
-                        screenshot.all().then(async displays => {
-                            for (var index = 0; index < displays.length; index++) {
-                                var startedAt = new Date().getTime()
+                        setInterval(() => {
+                            screenshot.all().then(async displays => {
+                                for (var index = 0; index < displays.length; index++) {
+                                    var startedAt = new Date().getTime()
 
-                                if (startedAt <= lastupdate[index]) return
+                                    if (startedAt <= lastupdate[index]) return
 
-                                var size = imageSize(displays[index])
+                                    var size = imageSize(displays[index])
 
-                                if (startedAt <= lastupdate[index]) return
+                                    var image = await sharp(displays[index], { sequentialRead: true })
+                                        .webp({ quality: 72, alphaQuality: 0, reductionEffort: 6 })
+                                        .composite([{ input: mouse, top: Math.floor(robot.getMousePos().y / 2), left: Math.floor(robot.getMousePos().x / 2) }])
+                                        .resize(Math.floor(size.width / 2), Math.floor(size.height / 2))
+                                        .sharpen()
+                                        .normalize()
+                                        .toBuffer()
 
-                                var image = await sharp(displays[index], { sequentialRead: true })
-                                    .webp({ quality: 72, alphaQuality: 0, reductionEffort: 6 })
-                                    .composite([{ input: mouse, top: Math.floor(robot.getMousePos().y / 2), left: Math.floor(robot.getMousePos().x / 2) }])
-                                    .resize(Math.floor(size.width / 2), Math.floor(size.height / 2))
-                                    .toBuffer()
+                                    if (startedAt <= lastupdate[index]) return
 
-                                if (startedAt <= lastupdate[index]) return
+                                    lastupdate[index] = new Date().getTime()
 
-                                lastupdate[index] = new Date().getTime()
-
-                                connection.send(new Packet("display", { id: index, size, image: image.toJSON(), totalAmount: displays.length }).encode())
-                            }
-                        })
-                    }, 1000 / this.fps)
-                })
+                                    connection.send(new Packet("display", { id: index, size, image: image.toJSON(), totalAmount: displays.length }).encode())
+                                }
+                            })
+                        }, 1000 / this.fps)
+                    })
             })
         })
     }

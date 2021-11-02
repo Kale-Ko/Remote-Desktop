@@ -8,7 +8,7 @@ module.exports = class Server {
         server.get("*", (req, res) => {
             res.statusCode = 200
             res.statusMessage = "Ok"
-            res.end(fs.readFileSync("./client/index.html"))
+            res.end(fs.readFileSync("./webclient/index.html"))
         })
 
         server.listen(port)

@@ -2,7 +2,10 @@
     "name": "remote-desktop",
     "version": "1.0.0",
     "scripts": {
-        "start": "node index.js"
+        "client": "node client.js",
+        "server": "node server.js",
+        "clientDev": "nodemon client.js",
+        "serverDev": "nodemon --ignore desktopclient/ server.js"
     },
     "dependencies": {
         "express": "^4.17.1",

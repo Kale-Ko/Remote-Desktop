@@ -17,6 +17,8 @@
 </head>
 
 <body>
+    <div id="displays"></div>
+
     <script src="/Packet.js"></script>
     <script>
         const server = new WebSocket("{origin}/")
@@ -24,7 +26,11 @@
         server.addEventListener("open", event => {
             console.log("Connection opened")
 
-            window.addEventListener("mousedown", event => {
+            document.addEventListener("mousedown", event => {
+                if (document.fullscreenEnabled && !document.fullscreen) {
+                    document.getElementById("displays").requestFullscreen()
+                }
+
                 if (event.target.id.includes("display")) {
                     event.stopImmediatePropagation()
                     event.preventDefault()
@@ -37,7 +43,7 @@
                 }
             })
 
-            window.addEventListener("contextmenu", event => {
+            document.addEventListener("contextmenu", event => {
                 if (event.target.id.includes("display")) {
                     event.stopImmediatePropagation()
                     event.preventDefault()
@@ -46,20 +52,33 @@
 
             var prevPos = { x: 0, y: 0 }
 
-            window.addEventListener("mousemove", event => {
+            document.addEventListener("mousemove", event => {
                 if (event.target.id.includes("display")) {
                     var pos = { x: event.pageX - event.target.x, y: event.pageY - event.target.y }
+
+                    pos.x = pos.x / (event.target.width / JSON.parse(event.target.getAttribute("displayAttributes")).width)
+                    pos.y = pos.y / (event.target.height / JSON.parse(event.target.getAttribute("displayAttributes")).height)
 
                     if (prevPos == pos) return
                     else prevPos = pos
 
-                    // server.send(new Packet("mousemove", { x: pos.x, y: pos.y }).encode())
+                    server.send(new Packet("mousemove", { x: pos.x, y: pos.y }).encode())
                 }
             })
 
-            window.addEventListener("keydown", event => {
+            document.addEventListener("wheel", event => {
+                if (event.target.id.includes("display")) {
+                    server.send(new Packet("mousescroll", { x: event.deltaX, y: event.deltaY }).encode())
+                }
+            })
+
+            document.addEventListener("keydown", event => {
                 event.stopImmediatePropagation()
                 event.preventDefault()
+
+                if (document.fullscreenEnabled && !document.fullscreen) {
+                    document.getElementById("displays").requestFullscreen()
+                }
 
                 var keys = {
                     // A-Z
@@ -220,7 +239,8 @@
                     image.id = "display" + message.data.id
                     image.src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
                     image.width = window.innerWidth / message.data.totalAmount
-                    document.body.appendChild(image)
+                    image.setAttribute("displayAttributes", JSON.stringify({ id: message.data.id, width: message.data.size.width, height: message.data.size.height }))
+                    document.getElementById("displays").appendChild(image)
                 }
             }
         })

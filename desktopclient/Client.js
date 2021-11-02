@@ -42,6 +42,8 @@ module.exports = class Client {
                         robot.moveMouseSmooth(message.data.x, message.data.y, 1)
                     } else if (message.type == "mouseclick") {
                         robot.mouseClick(message.data.button, false)
+                    } else if (message.type == "mousescrool") {
+                        robot.scrollMouse(message.data.x, message.data.y)
                     } else if (message.type == "keypress") {
                         if (message.data.type) robot.typeString(message.data.string)
                         else robot.keyTap(message.data.key, message.data.modifiers)
@@ -58,7 +60,7 @@ module.exports = class Client {
             sharp("./assets/mouse.png").toBuffer().then(image => {
                 var size = imageSize(image)
 
-                sharp(image).resize(Math.floor(size.width / 4), Math.floor(size.height / 4)).toBuffer().then(mouse => {
+                sharp(image).png({ compressionLevel: 9, quality: 1 }).resize(Math.floor(size.width / 4), Math.floor(size.height / 4)).toBuffer().then(mouse => {
                     var lastupdate = {}
 
                     setInterval(() => {
@@ -73,7 +75,7 @@ module.exports = class Client {
                                 if (startedAt <= lastupdate[index]) return
 
                                 var image = await sharp(displays[index], { sequentialRead: true })
-                                    .webp({ quality: 25, alphaQuality: 0, reductionEffort: 6 })
+                                    .webp({ quality: 72, alphaQuality: 0, reductionEffort: 6 })
                                     .composite([{ input: mouse, top: Math.floor(robot.getMousePos().y / 2), left: Math.floor(robot.getMousePos().x / 2) }])
                                     .resize(Math.floor(size.width / 2), Math.floor(size.height / 2))
                                     .toBuffer()

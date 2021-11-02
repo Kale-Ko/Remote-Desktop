@@ -1,8 +1,11 @@
 const fs = require("fs")
 
 module.exports = class Config {
-    frontport = 80
-    backport = 8000
+    webServerOrigin = "localhost:80"
+    serverOrigin = "localhost:8000"
+
+    webServerPort = 80
+    serverPort = 8000
 
     constructor(file) {
         if (file == undefined || file == null) throw new Error('Missig paramiter "file"')
@@ -17,7 +20,10 @@ module.exports = class Config {
             throw new Error("Config file is not a valid json")
         }
 
-        this.frontport = config.frontport || this.frontport
-        this.backport = config.backport || this.backport
+        this.webServerOrigin = config.webServerOrigin || this.webServerOrigin
+        this.serverOrigin = config.serverOrigin || this.serverOrigin
+
+        this.webServerPort = config.webServerPort || this.webServerPort
+        this.serverPort = config.serverPort || this.serverPort
     }
 }

@@ -4,5 +4,8 @@ const RemoteDesktopServer = require("./server/Server.js")
 
 const config = new Config("./config.json")
 
-var webServer = new WebServer(config.frontport)
-var remotedesktopServer = new RemoteDesktopServer(config.backport)
+var webServer = new WebServer(config.webServerOrigin, config.serverOrigin, config.webServerPort)
+var remotedesktopServer = new RemoteDesktopServer(config.serverOrigin, config.serverPort)
+
+webServer.start()
+remotedesktopServer.start()

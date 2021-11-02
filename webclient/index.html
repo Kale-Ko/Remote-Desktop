@@ -6,7 +6,17 @@
 </head>
 
 <body>
-    <h1>Coming soon</h1>
+    <script>
+        const server = new WebSocket("wss://{origin}/")
+
+        server.addEventListener("message", event => {
+            console.log(event)
+        })
+
+        server.addEventListener("close", event => {
+            console.log(event)
+        })
+    </script>
 </body>
 
 </html>

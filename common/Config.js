@@ -7,6 +7,8 @@ module.exports = class Config {
     webServerPort = 80
     serverPort = 8000
 
+    fps = 5
+
     enableControl = false
 
     constructor(file) {
@@ -27,6 +29,8 @@ module.exports = class Config {
 
         this.webServerPort = config.webServerPort || this.webServerPort
         this.serverPort = config.serverPort || this.serverPort
+
+        this.fps = config.fps || this.fps
 
         this.enableControl = config.enableControl || false
     }

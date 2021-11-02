@@ -8,13 +8,18 @@ const robot = require("robotjs")
 module.exports = class Client {
     serverurl
 
+    fps
+
     controlable
 
-    constructor(serverurl, controlable) {
+    constructor(serverurl, fps, controlable) {
         if (serverurl == undefined || serverurl == null) throw new Error('Missing paramiter "serverurl"')
+        if (fps == undefined || fps == null) throw new Error('Missing paramiter "fps"')
+        if (controlable == undefined || controlable == null) throw new Error('Missing paramiter "controlable"')
 
         this.client = new WebSocket({ maxReceivedFrameSize: 100000000, maxReceivedMessageSize: 100000000, fragmentationThreshold: 5000000 })
         this.serverurl = serverurl
+        this.fps = fps
         this.controlable = controlable
 
         if (this.controlable) {
@@ -70,7 +75,7 @@ module.exports = class Client {
                         connection.send(new Packet("display", { id: index, size, image: image.toJSON(), totalAmount: displays.length }).encode())
                     }
                 })
-            }, 1000 / 5)
+            }, 1000 / this.fps)
         })
     }
 }

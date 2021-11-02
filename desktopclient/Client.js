@@ -2,6 +2,7 @@ const WebSocket = require("WebSocket").client
 const Packet = require("../common/Packet.js")
 const screenshot = require("screenshot-desktop")
 const sharp = require("sharp")
+const imageSize = require("image-size")
 const robot = require("robotjs")
 
 module.exports = class Client {
@@ -33,7 +34,6 @@ module.exports = class Client {
 
                 if (this.controlable) {
                     if (message.type == "mousemove") {
-                        // robot.moveMouse(message.data.x, message.data.y)
                         robot.moveMouseSmooth(message.data.x, message.data.y)
                     } else if (message.type == "mouseclick") {
                         robot.mouseClick(message.data.button, false)
@@ -50,17 +50,27 @@ module.exports = class Client {
                 process.exit(0)
             })
 
+            var lastupdate = {}
+
             setInterval(() => {
                 screenshot.all().then(async displays => {
                     for (var index = 0; index < displays.length; index++) {
-                        var size = robot.getScreenSize()
+                        if (new Date().getTime() <= lastupdate[index]) return
 
-                        var image = await sharp(displays[index]).jpeg().resize(size.width / 2, size.height / 2).toBuffer()
+                        var size = imageSize(displays[index])
 
-                        connection.send(new Packet("display", { image: image.toJSON(), id: index }).encode())
+                        if (new Date().getTime() <= lastupdate[index]) return
+
+                        var image = await sharp(displays[index], { sequentialRead: true }).webp({ quality: 25, alphaQuality: 0, reductionEffort: 6 }).resize(size.width / 2, size.height / 2).toBuffer()
+
+                        if (new Date().getTime() <= lastupdate[index]) return
+
+                        lastupdate[index] = new Date().getTime()
+
+                        connection.send(new Packet("display", { id: index, size, image: image.toJSON(), totalAmount: displays.length }).encode())
                     }
                 })
-            }, 1000 / 1)
+            }, 1000 / 5)
         })
     }
 }

@@ -12,9 +12,6 @@
 
         img {
             float: left;
-
-            position: relative;
-            transform: translate(0px, 25%);
         }
     </style>
 </head>
@@ -26,10 +23,6 @@
 
         server.addEventListener("open", event => {
             console.log("Connection opened")
-        })
-
-        server.addEventListener("message", event => {
-            var message = Packet.decode(event.data)
 
             window.addEventListener("mousedown", event => {
                 if (event.target.id.includes("display")) {
@@ -51,8 +44,17 @@
                 }
             })
 
-            window.addEventListener("mousemove", () => {
+            var prevPos = { x: 0, y: 0 }
 
+            window.addEventListener("mousemove", event => {
+                if (event.target.id.includes("display")) {
+                    var pos = { x: event.pageX - event.target.x, y: event.pageY - event.target.y }
+
+                    if (prevPos == pos) return
+                    else prevPos = pos
+
+                    console.log(prevPos)
+                }
             })
 
             window.addEventListener("keydown", event => {
@@ -199,24 +201,25 @@
 
                 server.send(new Packet("keypress", { key, modifiers, type: false }).encode())
             })
+        })
+
+        var lastupdate = {}
+
+        server.addEventListener("message", event => {
+            var message = Packet.decode(event.data)
 
             if (message.type == "display") {
+                if (message.data.timestamp <= lastupdate[message.data.id]) return
+
+                lastupdate[message.data.id] = message.data.timestamp
+
                 if (document.getElementById("display" + message.data.id) != null) {
-                    document.getElementById("display" + message.data.id).src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: 'image/jpg' }))
-
-                    var amount = 0
-
-                    for (var running = true, index = 0; running; index++) {
-                        if (document.getElementById("display" + index) != null) {
-                            amount++
-                        } else running = false
-                    }
-
-                    document.getElementById("display" + message.data.id).width = window.innerWidth / amount
+                    document.getElementById("display" + message.data.id).src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
                 } else {
                     var image = document.createElement("img")
                     image.id = "display" + message.data.id
-                    image.src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: 'image/jpg' }))
+                    image.src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
+                    image.width = window.innerWidth / message.data.totalAmount
                     document.body.appendChild(image)
                 }
             }

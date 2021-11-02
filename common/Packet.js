@@ -18,8 +18,6 @@ class Packet {
     static decode(data) {
         data = JSON.parse(atob(data))
 
-        data.data.traveltime = new Date().getTime() - data.data.timestamp + "ms"
-
         return new Packet(data.type, data.data)
     }
 }

@@ -14,12 +14,13 @@ module.exports = class Config {
     constructor(file) {
         if (file == undefined || file == null) throw new Error('Missing paramiter "file"')
 
-        if (!fs.existsSync(file)) throw new Error("Config file does not exist")
+        if (!fs.existsSync(file) && !process.env.CONFIG) throw new Error("Config file does not exist")
 
         var config
 
         try {
-            config = JSON.parse(fs.readFileSync(file))
+            if (!process.env.CONFIG) config = JSON.parse(fs.readFileSync(file))
+            else config = JSON.parse(process.env.CONFIG)
         } catch (err) {
             throw new Error("Config file is not a valid json")
         }

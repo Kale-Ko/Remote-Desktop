@@ -3,7 +3,7 @@ class Packet {
     data
 
     constructor(type, data) {
-        if (type == undefined || type == null) throw new Error('Missig paramiter "type"')
+        if (type == undefined || type == null) throw new Error('Missing paramiter "type"')
 
         this.type = type
         this.data = data || {}

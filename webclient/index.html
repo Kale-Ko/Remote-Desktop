@@ -23,6 +23,9 @@
                 console.log("Connection accepted")
             } else if (message.type == "connectionrejected") server.close()
             else if (message.type == "ping") server.send(new Packet("pong").encode())
+            else if (message.type == "display") {
+                console.log("Received display")
+            }
         })
 
         server.addEventListener("close", event => {

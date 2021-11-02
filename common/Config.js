@@ -8,7 +8,7 @@ module.exports = class Config {
     serverPort = 8000
 
     constructor(file) {
-        if (file == undefined || file == null) throw new Error('Missig paramiter "file"')
+        if (file == undefined || file == null) throw new Error('Missing paramiter "file"')
 
         if (!fs.existsSync(file)) throw new Error("Config file does not exist")
 

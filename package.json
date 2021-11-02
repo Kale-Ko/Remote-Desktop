@@ -6,6 +6,8 @@
     },
     "dependencies": {
         "express": "^4.17.1",
+        "robojs": "^6.0.0",
+        "screenshot-desktop": "^1.12.7",
         "websocket": "^1.0.34"
     }
 }

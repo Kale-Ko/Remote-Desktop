@@ -11,9 +11,9 @@ module.exports = class Server {
     port
 
     constructor(origin, webServerOrigin, port) {
-        if (origin == undefined || origin == null) throw new Error('Missig paramiter "origin"')
-        if (webServerOrigin == undefined || webServerOrigin == null) throw new Error('Missig paramiter "webServerOrigin"')
-        if (port == undefined || port == null) throw new Error('Missig paramiter "port"')
+        if (origin == undefined || origin == null) throw new Error('Missing paramiter "origin"')
+        if (webServerOrigin == undefined || webServerOrigin == null) throw new Error('Missing paramiter "webServerOrigin"')
+        if (port == undefined || port == null) throw new Error('Missing paramiter "port"')
 
         this.httpServer = http.createServer((req, res) => { })
         this.server = new WebSocket({ httpServer: this.httpServer, keepalive: false })
@@ -45,6 +45,7 @@ module.exports = class Server {
                         connection.send(new Packet("ping").encode())
                     }, 5000)
                 } else if (message.type == "pong") connection.lastPing = new Date().getTime()
+                else if (message.type == "display") this.server.broadcast(message.encode())
             })
         }))
     }

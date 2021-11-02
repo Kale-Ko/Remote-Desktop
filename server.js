@@ -1,4 +1,4 @@
-const Config = require("./Config.js")
+const Config = require("./common/Config.js")
 const WebServer = require("./webclient/Server.js")
 const RemoteDesktopServer = require("./server/Server.js")
 

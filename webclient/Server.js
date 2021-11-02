@@ -9,9 +9,9 @@ module.exports = class Server {
     port
 
     constructor(origin, serverorigin, port) {
-        if (origin == undefined || origin == null) throw new Error('Missig paramiter "origin"')
-        if (serverorigin == undefined || serverorigin == null) throw new Error('Missig paramiter "serverorigin"')
-        if (port == undefined || port == null) throw new Error('Missig paramiter "port"')
+        if (origin == undefined || origin == null) throw new Error('Missing paramiter "origin"')
+        if (serverorigin == undefined || serverorigin == null) throw new Error('Missing paramiter "serverorigin"')
+        if (port == undefined || port == null) throw new Error('Missing paramiter "port"')
 
         this.server = express()
         this.origin = origin

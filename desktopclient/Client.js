@@ -39,7 +39,7 @@ module.exports = class Client {
 
                 if (this.controlable) {
                     if (message.type == "mousemove") {
-                        robot.moveMouseSmooth(message.data.x, message.data.y)
+                        robot.moveMouseSmooth(message.data.x, message.data.y, 1)
                     } else if (message.type == "mouseclick") {
                         robot.mouseClick(message.data.button, false)
                     } else if (message.type == "keypress") {
@@ -55,27 +55,39 @@ module.exports = class Client {
                 process.exit(0)
             })
 
-            var lastupdate = {}
+            sharp("./assets/mouse.png").toBuffer().then(image => {
+                var size = imageSize(image)
 
-            setInterval(() => {
-                screenshot.all().then(async displays => {
-                    for (var index = 0; index < displays.length; index++) {
-                        if (new Date().getTime() <= lastupdate[index]) return
+                sharp(image).resize(Math.floor(size.width / 4), Math.floor(size.height / 4)).toBuffer().then(mouse => {
+                    var lastupdate = {}
 
-                        var size = imageSize(displays[index])
+                    setInterval(() => {
+                        screenshot.all().then(async displays => {
+                            for (var index = 0; index < displays.length; index++) {
+                                var startedAt = new Date().getTime()
 
-                        if (new Date().getTime() <= lastupdate[index]) return
+                                if (startedAt <= lastupdate[index]) return
 
-                        var image = await sharp(displays[index], { sequentialRead: true }).webp({ quality: 25, alphaQuality: 0, reductionEffort: 6 }).resize(size.width / 2, size.height / 2).toBuffer()
+                                var size = imageSize(displays[index])
 
-                        if (new Date().getTime() <= lastupdate[index]) return
+                                if (startedAt <= lastupdate[index]) return
 
-                        lastupdate[index] = new Date().getTime()
+                                var image = await sharp(displays[index], { sequentialRead: true })
+                                    .webp({ quality: 25, alphaQuality: 0, reductionEffort: 6 })
+                                    .composite([{ input: mouse, top: Math.floor(robot.getMousePos().y / 2), left: Math.floor(robot.getMousePos().x / 2) }])
+                                    .resize(Math.floor(size.width / 2), Math.floor(size.height / 2))
+                                    .toBuffer()
 
-                        connection.send(new Packet("display", { id: index, size, image: image.toJSON(), totalAmount: displays.length }).encode())
-                    }
+                                if (startedAt <= lastupdate[index]) return
+
+                                lastupdate[index] = new Date().getTime()
+
+                                connection.send(new Packet("display", { id: index, size, image: image.toJSON(), totalAmount: displays.length }).encode())
+                            }
+                        })
+                    }, 1000 / this.fps)
                 })
-            }, 1000 / this.fps)
+            })
         })
     }
 }

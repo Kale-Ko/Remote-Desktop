@@ -1,11 +1,8 @@
 const fs = require("fs")
 
 module.exports = class Config {
-    webServerOrigin = "localhost:80"
-    serverOrigin = "localhost:8000"
-
-    webServerPort = 80
-    serverPort = 8000
+    origin = "http://localhost:3000"
+    port = 3000
 
     fps = 5
 
@@ -25,11 +22,8 @@ module.exports = class Config {
             throw new Error("Config file is not a valid json")
         }
 
-        this.webServerOrigin = config.webServerOrigin || this.webServerOrigin
-        this.serverOrigin = config.serverOrigin || this.serverOrigin
-
-        this.webServerPort = config.webServerPort || this.webServerPort
-        this.serverPort = config.serverPort || this.serverPort
+        this.port = config.port || this.port
+        this.origin = config.origin || this.origin
 
         this.fps = config.fps || this.fps
 

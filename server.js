@@ -1,11 +1,10 @@
 const Config = require("./common/Config.js")
-const WebServer = require("./webclient/Server.js")
 const RemoteDesktopServer = require("./server/Server.js")
 
 const config = new Config("./config.json")
 
-var webServer = new WebServer(config.webServerOrigin, config.serverOrigin, config.webServerPort)
-var remotedesktopServer = new RemoteDesktopServer(config.serverOrigin, config.webServerOrigin, config.serverPort)
+if (process.env.PORT && !config.port) config.port = process.env.PORT
 
-webServer.start()
+var remotedesktopServer = new RemoteDesktopServer(config.port, config.origin)
+
 remotedesktopServer.start()

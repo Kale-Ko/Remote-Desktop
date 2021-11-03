@@ -3,7 +3,7 @@ const RemoteDesktopServer = require("./server/Server.js")
 
 const config = new Config("./config.json")
 
-if (process.env.PORT && !config.port) config.port = process.env.PORT
+if (process.env.PORT) config.port = process.env.PORT
 
 var remotedesktopServer = new RemoteDesktopServer(config.port, config.origin)
 

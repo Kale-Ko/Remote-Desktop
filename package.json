@@ -1,6 +1,9 @@
 {
     "name": "remote-desktop",
     "version": "1.0.0",
+    "engines": {
+        "node": "16"
+    },
     "scripts": {
         "client": "node client.js",
         "server": "node server.js",

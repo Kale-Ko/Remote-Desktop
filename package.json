@@ -5,6 +5,8 @@
         "node": "16"
     },
     "scripts": {
+        "install": "npm install websocket --no-save",
+        "installDev": "npm i robotjs screenshot-desktop sharp image-size --no-save",
         "client": "node client.js",
         "server": "node server.js",
         "clientDev": "nodemon client.js",
@@ -12,11 +14,5 @@
     },
     "dependencies": {
         "websocket": "^1.0.34"
-    },
-    "devDependencies": {
-        "image-size": "^1.0.0",
-        "robotjs": "^0.6.0",
-        "screenshot-desktop": "^1.12.7",
-        "sharp": "^0.29.2"
     }
 }

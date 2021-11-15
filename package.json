@@ -5,12 +5,19 @@
         "node": "16"
     },
     "scripts": {
-        "start": "node server.js",
-        "startClient": "node client.js",
+        "start": "npm run server",
+        "server": "node server.js",
+        "client": "node client.js",
+        "serverDev": "nodemon server.js",
+        "clientDev": "nodemon client.js",
         "install": "npm install websocket --no-save",
         "installDev": "npm i robotjs screenshot-desktop sharp image-size --no-save"
     },
     "dependencies": {
+        "image-size": "^1.0.0",
+        "robotjs": "^0.6.0",
+        "screenshot-desktop": "^1.12.7",
+        "sharp": "^0.29.3",
         "websocket": "^1.0.34"
     }
 }

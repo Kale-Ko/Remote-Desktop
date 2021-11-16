@@ -68,7 +68,9 @@ module.exports = class Server {
                         } else if (req.url == "/control") {
                             var message = Packet.decode(req.headers.packet)
 
-                            message.data.forEach(packet => {
+                            message.data.forEach(data => {
+                                var packet = Packet.decode(data)
+
                                 if (packet.type == "mousemove") {
                                     robot.moveMouseSmooth(packet.data.x, packet.data.y, 1)
                                 } else if (packet.type == "mouseclick") {

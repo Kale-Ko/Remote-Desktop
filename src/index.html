@@ -291,9 +291,9 @@
                     headers: {
                         packet: new Packet("controls", controls).encode()
                     }
-                }).then(res => res.text()).then(data => {
-                    controls.splice(0, 1)
                 })
+
+                controls = []
             }, 1000 / pps)
         } else {
             function sendPackets() {
@@ -313,7 +313,7 @@
                             packet: new Packet("controls", controls).encode()
                         }
                     }).then(res => res.text()).then(data => {
-                        var controls = []
+                        controls = []
 
                         sendPackets()
                     })

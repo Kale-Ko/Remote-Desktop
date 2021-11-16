@@ -56,7 +56,7 @@ module.exports = class Server {
 
                                 var image = await sharp(display, { sequentialRead: true })
                                     .webp({ quality: message.data.quality, alphaQuality: 0, reductionEffort: 6 })
-                                    .composite([{ input: mouse, top: Math.floor(robot.getMousePos().y / 2), left: Math.floor(robot.getMousePos().x / 2) }])
+                                    .composite([{ input: mouse, top: Math.floor(robot.getMousePos().y * message.data.scale), left: Math.floor(robot.getMousePos().x * message.data.scale) }])
                                     .resize(Math.floor(size.width * message.data.scale), Math.floor(size.height * message.data.scale))
                                     .sharpen()
                                     .toBuffer()

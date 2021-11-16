@@ -21,7 +21,13 @@
 
     <script src="/Packet.js"></script>
     <script>
-        const fps = 10
+        const fps = 5
+        const fixedFps = false
+
+        const pps = 2
+        const fixedPps = false
+
+        const toSend = []
 
         document.addEventListener("mousedown", event => {
             if (event.target.id.includes("display")) {
@@ -32,11 +38,7 @@
                 else if (event.button == 1) var button = "middle"
                 else if (event.button == 2) var button = "right"
 
-                fetch("/control", {
-                    headers: {
-                        packet: new Packet("mouseclick", { button }).encode()
-                    }
-                })
+                toSend.push({ url: "/control", data: new Packet("mouseclick", { button }).encode() })
             }
         })
 
@@ -59,21 +61,13 @@
                 if (prevPos == pos) return
                 else prevPos = pos
 
-                fetch("/control", {
-                    headers: {
-                        packet: new Packet("mousemove", { x: pos.x, y: pos.y }).encode()
-                    }
-                })
+                toSend.push({ url: "/control", data: new Packet("mousemove", { x: pos.x, y: pos.y }).encode() })
             }
         })
 
         document.addEventListener("wheel", event => {
             if (event.target.id.includes("display")) {
-                fetch("/control", {
-                    headers: {
-                        packet: new Packet("mousescroll", { x: event.deltaX, y: event.deltaY }).encode()
-                    }
-                })
+                toSend.push({ url: "/control", data: new Packet("mousescroll", { x: event.deltaX, y: event.deltaY }).encode() })
             }
         })
 
@@ -219,11 +213,7 @@
             if (event.altKey) modifiers.push("alt")
             else if (event.metaKey) modifiers.push("command")
 
-            fetch("/control", {
-                headers: {
-                    packet: new Packet("keypress", { key, modifiers, type: false }).encode()
-                }
-            })
+            toSend.push({ url: "/control", data: new Packet("keypress", { key, modifiers, type: false }).encode() })
         })
 
         fetch("/displays").then(res => res.text()).then(data => {
@@ -237,20 +227,68 @@
                     image.setAttribute("displayAttributes", JSON.stringify({ id: display.id, width: display.size.width, height: display.size.height }))
                     document.getElementById("displays").appendChild(image)
 
-                    setInterval(() => {
-                        fetch("/display", {
-                            headers: {
-                                packet: new Packet("display", { id: display.id }).encode()
-                            }
-                        }).then(res => res.text()).then(data => {
-                            var message = Packet.decode(data)
+                    if (fixedFps) {
+                        setInterval(() => {
+                            fetch("/display", {
+                                headers: {
+                                    packet: new Packet("display", { id: display.id }).encode()
+                                }
+                            }).then(res => res.text()).then(data => {
+                                var message = Packet.decode(data)
 
-                            image.src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
-                        })
-                    }, 1000 / fps)
+                                image.src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
+                            })
+                        }, 1000 / fps)
+                    } else {
+                        function getScreen() {
+                            fetch("/display", {
+                                headers: {
+                                    packet: new Packet("display", { id: display.id }).encode()
+                                }
+                            }).then(res => res.text()).then(data => {
+                                var message = Packet.decode(data)
+
+                                image.src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
+
+                                getScreen()
+                            })
+                        }
+                        getScreen()
+                    }
                 }
             })
         })
+
+        if (fixedPps) {
+            setInterval(() => {
+                toSend.forEach(packet => {
+                    fetch(packet.url, {
+                        headers: {
+                            packet: packet.packet
+                        }
+                    }).then(res => res.text()).then(data => {
+                        toSend.splice(toSend.indexOf(packet), 1)
+                    })
+                })
+            }, 1000 / pps)
+        } else {
+            function sendPackets() {
+                if (toSend.length == 0) requestAnimationFrame(sendPackets)
+
+                toSend.forEach(packet => {
+                    fetch(packet.url, {
+                        headers: {
+                            packet: packet.data
+                        }
+                    }).then(res => res.text()).then(data => {
+                        toSend.splice(toSend.indexOf(packet), 1)
+
+                        sendPackets()
+                    })
+                })
+            }
+            sendPackets()
+        }
     </script>
 </body>
 

@@ -38,7 +38,7 @@
                 else if (event.button == 1) var button = "middle"
                 else if (event.button == 2) var button = "right"
 
-                toSend.push({ url: "/control", data: new Packet("mouseclick", { button }).encode() })
+                quePacket({ url: "/control", data: new Packet("mouseclick", { button }).encode() })
             }
         })
 
@@ -61,13 +61,13 @@
                 if (prevPos == pos) return
                 else prevPos = pos
 
-                toSend.push({ url: "/control", data: new Packet("mousemove", { x: pos.x, y: pos.y }).encode() })
+                quePacket({ url: "/control", data: new Packet("mousemove", { x: pos.x, y: pos.y }).encode() })
             }
         })
 
         document.addEventListener("wheel", event => {
             if (event.target.id.includes("display")) {
-                toSend.push({ url: "/control", data: new Packet("mousescroll", { x: event.deltaX, y: event.deltaY }).encode() })
+                quePacket({ url: "/control", data: new Packet("mousescroll", { x: event.deltaX, y: event.deltaY }).encode() })
             }
         })
 
@@ -213,7 +213,7 @@
             if (event.altKey) modifiers.push("alt")
             else if (event.metaKey) modifiers.push("command")
 
-            toSend.push({ url: "/control", data: new Packet("keypress", { key, modifiers, type: false }).encode() })
+            quePacket({ url: "/control", data: new Packet("keypress", { key, modifiers, type: false }).encode() })
         })
 
         fetch("/displays").then(res => res.text()).then(data => {
@@ -259,6 +259,14 @@
             })
         })
 
+        function quePacket(packet) {
+            toSend.forEach(packet2 => {
+                if (packet.data.type == packet2.data.type) toSend.splice(toSend.indexOf(packet2), 1)
+            })
+
+            toSend.push(packet)
+        }
+
         if (fixedPps) {
             setInterval(() => {
                 toSend.forEach(packet => {
@@ -274,18 +282,19 @@
         } else {
             function sendPackets() {
                 if (toSend.length == 0) requestAnimationFrame(sendPackets)
+                else {
+                    toSend.forEach(packet => {
+                        fetch(packet.url, {
+                            headers: {
+                                packet: packet.data
+                            }
+                        }).then(res => res.text()).then(data => {
+                            toSend.splice(toSend.indexOf(packet), 1)
 
-                toSend.forEach(packet => {
-                    fetch(packet.url, {
-                        headers: {
-                            packet: packet.data
-                        }
-                    }).then(res => res.text()).then(data => {
-                        toSend.splice(toSend.indexOf(packet), 1)
-
-                        sendPackets()
+                            sendPackets()
+                        })
                     })
-                })
+                }
             }
             sendPackets()
         }

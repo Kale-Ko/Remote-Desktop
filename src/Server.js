@@ -87,6 +87,10 @@ module.exports = class Server {
                                 if (message.data.type) robot.typeString(message.data.string)
                                 else robot.keyTap(message.data.key, message.data.modifiers)
                             }
+
+                            res.statusCode = 200
+                            res.statusMessage = "Ok"
+                            res.end(new Packet("complete").encode())
                         } else {
                             res.statusCode = 404
                             res.statusMessage = "Not Found"

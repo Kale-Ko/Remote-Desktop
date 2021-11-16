@@ -21,14 +21,14 @@
 
     <script src="/Packet.js"></script>
     <script>
-        const fps = 5
-        const fixedFps = false
+        const fps = parseInt(localStorage.getItem("fps") || 5)
+        const fixedFps = (localStorage.getItem("fixedFps") || "false") == "true" ? true : false
 
-        const scale = 0.25
-        const quality = 25
+        const scale = parseFloat(localStorage.getItem("scale") || 0.25)
+        const quality = parseInt(localStorage.getItem("quality") || 50)
 
-        const pps = 2
-        const fixedPps = true
+        const pps = parseInt(localStorage.getItem("pps") || 2)
+        const fixedPps = (localStorage.getItem("fixedPps") || "true") == "true" ? true : false
 
         const toSend = []
 

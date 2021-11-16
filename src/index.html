@@ -21,6 +21,8 @@
 
     <script src="/Packet.js"></script>
     <script>
+        const fps = 10
+
         document.addEventListener("mousedown", event => {
             if (event.target.id.includes("display")) {
                 event.stopImmediatePropagation()
@@ -30,7 +32,11 @@
                 else if (event.button == 1) var button = "middle"
                 else if (event.button == 2) var button = "right"
 
-                // server.send(new Packet("mouseclick", { button }).encode())
+                fetch("/control", {
+                    headers: {
+                        packet: new Packet("mouseclick", { button }).encode()
+                    }
+                })
             }
         })
 
@@ -53,13 +59,21 @@
                 if (prevPos == pos) return
                 else prevPos = pos
 
-                // server.send(new Packet("mousemove", { x: pos.x, y: pos.y }).encode())
+                fetch("/control", {
+                    headers: {
+                        packet: new Packet("mousemove", { x: pos.x, y: pos.y }).encode()
+                    }
+                })
             }
         })
 
         document.addEventListener("wheel", event => {
             if (event.target.id.includes("display")) {
-                // server.send(new Packet("mousescroll", { x: event.deltaX, y: event.deltaY }).encode())
+                fetch("/control", {
+                    headers: {
+                        packet: new Packet("mousescroll", { x: event.deltaX, y: event.deltaY }).encode()
+                    }
+                })
             }
         })
 
@@ -205,33 +219,38 @@
             if (event.altKey) modifiers.push("alt")
             else if (event.metaKey) modifiers.push("command")
 
-            // server.send(new Packet("keypress", { key, modifiers, type: false }).encode())
+            fetch("/control", {
+                headers: {
+                    packet: new Packet("keypress", { key, modifiers, type: false }).encode()
+                }
+            })
         })
 
-        function getDisplays() {
-            fetch("/displays").then(res => res.text()).then(data => {
-                var message = Packet.decode(data)
+        fetch("/displays").then(res => res.text()).then(data => {
+            var message = Packet.decode(data)
 
-                console.log(message.data)
+            message.data.forEach(display => {
+                if (document.getElementById("display" + display.id) == null) {
+                    var image = document.createElement("img")
+                    image.id = "display" + display.id
+                    image.width = window.innerWidth / message.data.length
+                    image.setAttribute("displayAttributes", JSON.stringify({ id: display.id, width: display.size.width, height: display.size.height }))
+                    document.getElementById("displays").appendChild(image)
 
-                message.data.forEach(display => {
-                    if (document.getElementById("display" + display.id) == null) {
-                        var image = document.createElement("video")
-                        image.id = "display" + display.id
-                        var source = new MediaSource()
-                        image.src = URL.createObjectURL(source)
-                        image.width = window.innerWidth / message.data.length
-                        image.setAttribute("displayAttributes", JSON.stringify({ id: display.id, width: display.size.width, height: display.size.height }))
-                        document.getElementById("displays").appendChild(image)
+                    setInterval(() => {
+                        fetch("/display", {
+                            headers: {
+                                packet: new Packet("display", { id: display.id }).encode()
+                            }
+                        }).then(res => res.text()).then(data => {
+                            var message = Packet.decode(data)
 
-                        source.addEventListener("sourceopen", () => {
-                            var video = source.addSourceBuffer("video/mp4; codecs=\"avc1.64001e\"")
+                            image.src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
                         })
-                    }
-                })
+                    }, 1000 / fps)
+                }
             })
-        }
-        getDisplays()
+        })
     </script>
 </body>
 

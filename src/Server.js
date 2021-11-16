@@ -66,18 +66,18 @@ module.exports = class Server {
                                 res.end(new Packet("display", { id: message.data.id, size, status: "change", image }).encode())
                             })
                         } else if (req.url == "/control") {
-                            var controls = Packet.decode(req.headers.controls)
+                            var message = Packet.decode(req.headers.packet)
 
-                            controls.data.forEach(message => {
-                                if (message.type == "mousemove") {
-                                    robot.moveMouseSmooth(message.data.x, message.data.y, 1)
-                                } else if (message.type == "mouseclick") {
-                                    robot.mouseClick(message.data.button, false)
-                                } else if (message.type == "mousescroll") {
-                                    robot.scrollMouse(message.data.x, message.data.y)
-                                } else if (message.type == "keypress") {
-                                    if (message.data.type) robot.typeString(message.data.string)
-                                    else robot.keyTap(message.data.key, message.data.modifiers)
+                            message.data.forEach(packet => {
+                                if (packet.type == "mousemove") {
+                                    robot.moveMouseSmooth(packet.data.x, packet.data.y, 1)
+                                } else if (packet.type == "mouseclick") {
+                                    robot.mouseClick(packet.data.button, false)
+                                } else if (packet.type == "mousescroll") {
+                                    robot.scrollMouse(packet.data.x, packet.data.y)
+                                } else if (packet.type == "keypress") {
+                                    if (packet.data.type) robot.typeString(packet.data.string)
+                                    else robot.keyTap(packet.data.key, packet.data.modifiers)
                                 }
                             })
 

@@ -310,7 +310,7 @@
                 else {
                     fetch("/control", {
                         headers: {
-                            controls
+                            packet: new Packet("controls", controls).encode()
                         }
                     }).then(res => res.text()).then(data => {
                         var controls = []

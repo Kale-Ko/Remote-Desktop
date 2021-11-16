@@ -21,213 +21,199 @@
 
     <script src="/Packet.js"></script>
     <script>
-        const server = new WebSocket("{origin}/")
-
-        server.addEventListener("open", event => {
-            console.log("Connection opened")
-
-            server.send(new Packet("newconnection").encode())
-
-            document.addEventListener("mousedown", event => {
-                if (document.fullscreenEnabled && !document.fullscreen) {
-                    document.getElementById("displays").requestFullscreen()
-                }
-
-                if (event.target.id.includes("display")) {
-                    event.stopImmediatePropagation()
-                    event.preventDefault()
-
-                    if (event.button == 0) var button = "left"
-                    else if (event.button == 1) var button = "middle"
-                    else if (event.button == 2) var button = "right"
-
-                    server.send(new Packet("mouseclick", { button }).encode())
-                }
-            })
-
-            document.addEventListener("contextmenu", event => {
-                if (event.target.id.includes("display")) {
-                    event.stopImmediatePropagation()
-                    event.preventDefault()
-                }
-            })
-
-            var prevPos = { x: 0, y: 0 }
-
-            document.addEventListener("mousemove", event => {
-                if (event.target.id.includes("display")) {
-                    var pos = { x: event.pageX - event.target.x, y: event.pageY - event.target.y }
-
-                    pos.x = pos.x / (event.target.width / JSON.parse(event.target.getAttribute("displayAttributes")).width)
-                    pos.y = pos.y / (event.target.height / JSON.parse(event.target.getAttribute("displayAttributes")).height)
-
-                    if (prevPos == pos) return
-                    else prevPos = pos
-
-                    server.send(new Packet("mousemove", { x: pos.x, y: pos.y }).encode())
-                }
-            })
-
-            document.addEventListener("wheel", event => {
-                if (event.target.id.includes("display")) {
-                    server.send(new Packet("mousescroll", { x: event.deltaX, y: event.deltaY }).encode())
-                }
-            })
-
-            document.addEventListener("keydown", event => {
+        document.addEventListener("mousedown", event => {
+            if (event.target.id.includes("display")) {
                 event.stopImmediatePropagation()
                 event.preventDefault()
 
-                if (document.fullscreenEnabled && !document.fullscreen) {
-                    document.getElementById("displays").requestFullscreen()
-                }
+                if (event.button == 0) var button = "left"
+                else if (event.button == 1) var button = "middle"
+                else if (event.button == 2) var button = "right"
 
-                var keys = {
-                    // A-Z
-                    "KeyA": "a",
-                    "KeyB": "b",
-                    "KeyC": "c",
-                    "KeyD": "d",
-                    "KeyE": "e",
-                    "KeyF": "f",
-                    "KeyG": "g",
-                    "KeyH": "h",
-                    "KeyI": "i",
-                    "KeyJ": "j",
-                    "KeyK": "k",
-                    "KeyL": "l",
-                    "KeyM": "m",
-                    "KeyN": "n",
-                    "KeyO": "o",
-                    "KeyP": "p",
-                    "KeyQ": "q",
-                    "KeyR": "r",
-                    "KeyS": "s",
-                    "KeyT": "t",
-                    "KeyU": "u",
-                    "KeyV": "v",
-                    "KeyW": "w",
-                    "KeyX": "x",
-                    "KeyY": "y",
-                    "KeyZ": "z",
-
-                    // 0-9
-                    "Digit0": "0",
-                    "Digit1": "1",
-                    "Digit2": "2",
-                    "Digit3": "3",
-                    "Digit4": "4",
-                    "Digit5": "5",
-                    "Digit6": "6",
-                    "Digit7": "7",
-                    "Digit8": "8",
-                    "Digit9": "9",
-
-                    // Special charecters
-                    "Backquote": "`",
-                    "Minus": "-",
-                    "Equal": "-",
-                    "BracketLeft": "[",
-                    "BracketRight": "]",
-                    "Backslash": "\\",
-                    "Semicolon": ";",
-                    "Quote": "'",
-                    "Comma": ",",
-                    "Period": ".",
-                    "Slash": "/",
-
-                    // Special keys
-                    "Space": "space",
-                    "Backspace": "backspace",
-                    "Enter": "enter",
-                    "Tab": "tab",
-
-                    // Functional keys
-                    "PrintScreen": "printscreen",
-                    "Insert": "insert",
-                    "Delete": "delete",
-                    "Home": "home",
-                    "End": "end",
-                    "PageUp": "pageup",
-                    "PageDown": "pagedown",
-                    "Escape": "escape",
-
-                    // Arrow keys
-                    "ArrowUp": "up",
-                    "ArrowDown": "down",
-                    "ArrowLeft": "left",
-                    "ArrowRight": "right",
-
-                    // Function keys
-                    "F1": "f1",
-                    "F2": "f2",
-                    "F3": "f3",
-                    "F4": "f4",
-                    "F5": "f5",
-                    "F6": "f6",
-                    "F7": "f7",
-                    "F8": "f8",
-                    "F9": "f9",
-                    "F10": "f10",
-                    "F11": "f11",
-                    "F12": "f12",
-
-                    // Modifier keys
-                    "Command": "command",
-                    "MetaLeft": "command",
-                    "MetaRight": "command",
-                    "AltLeft": "alt",
-                    "AltRight": "alt",
-                    "ControlLeft": "control",
-                    "ControlRight": "control",
-                    "ShiftLeft": "shift",
-                    "ShiftRight": "right_shift",
-
-                    // Control keys
-                    "AudioVolumeMute": "audio_mute",
-                    "AudioVolumeDown": "audio_vol_down",
-                    "AudioVolumeUp": "audio_vol_up",
-                    "MediaTrackPrevious": "audio_prev",
-                    "MediaPlayPause": "audio_pause",
-                    "MediaTrackNext": "audio_next",
-
-                    // Numpad keys
-                    "Numpad0": "numpad_0",
-                    "Numpad1": "numpad_1",
-                    "Numpad2": "numpad_2",
-                    "Numpad3": "numpad_3",
-                    "Numpad4": "numpad_4",
-                    "Numpad5": "numpad_5",
-                    "Numpad6": "numpad_6",
-                    "Numpad7": "numpad_7",
-                    "Numpad8": "numpad_8",
-                    "Numpad9": "numpad_9",
-                    "NumpadAdd": "+",
-                    "NumpadSubtract": "-",
-                    "NumpadMultiply": "*",
-                    "NumpadDivide": "/",
-                    "NumpadDecimal": ".",
-                    "NumpadEnter": "enter"
-                }
-
-                var type = false
-                var key = keys[event.code]
-                if (key == undefined) return console.warn("Unknown Key " + event.code)
-
-                var modifiers = []
-                if (event.shiftKey) modifiers.push("shift")
-                if (event.ctrlKey) modifiers.push("control")
-                if (event.altKey) modifiers.push("alt")
-                else if (event.metaKey) modifiers.push("command")
-
-                server.send(new Packet("keypress", { key, modifiers, type: false }).encode())
-            })
+                // server.send(new Packet("mouseclick", { button }).encode())
+            }
         })
 
-        server.addEventListener("message", event => {
-            var message = Packet.decode(event.data)
+        document.addEventListener("contextmenu", event => {
+            if (event.target.id.includes("display")) {
+                event.stopImmediatePropagation()
+                event.preventDefault()
+            }
+        })
 
-            if (message.type == "displays") {
+        var prevPos = { x: 0, y: 0 }
+
+        document.addEventListener("mousemove", event => {
+            if (event.target.id.includes("display")) {
+                var pos = { x: event.pageX - event.target.x, y: event.pageY - event.target.y }
+
+                pos.x = pos.x / (event.target.width / JSON.parse(event.target.getAttribute("displayAttributes")).width)
+                pos.y = pos.y / (event.target.height / JSON.parse(event.target.getAttribute("displayAttributes")).height)
+
+                if (prevPos == pos) return
+                else prevPos = pos
+
+                // server.send(new Packet("mousemove", { x: pos.x, y: pos.y }).encode())
+            }
+        })
+
+        document.addEventListener("wheel", event => {
+            if (event.target.id.includes("display")) {
+                // server.send(new Packet("mousescroll", { x: event.deltaX, y: event.deltaY }).encode())
+            }
+        })
+
+        document.addEventListener("keydown", event => {
+            event.stopImmediatePropagation()
+            event.preventDefault()
+
+            var keys = {
+                // A-Z
+                "KeyA": "a",
+                "KeyB": "b",
+                "KeyC": "c",
+                "KeyD": "d",
+                "KeyE": "e",
+                "KeyF": "f",
+                "KeyG": "g",
+                "KeyH": "h",
+                "KeyI": "i",
+                "KeyJ": "j",
+                "KeyK": "k",
+                "KeyL": "l",
+                "KeyM": "m",
+                "KeyN": "n",
+                "KeyO": "o",
+                "KeyP": "p",
+                "KeyQ": "q",
+                "KeyR": "r",
+                "KeyS": "s",
+                "KeyT": "t",
+                "KeyU": "u",
+                "KeyV": "v",
+                "KeyW": "w",
+                "KeyX": "x",
+                "KeyY": "y",
+                "KeyZ": "z",
+
+                // 0-9
+                "Digit0": "0",
+                "Digit1": "1",
+                "Digit2": "2",
+                "Digit3": "3",
+                "Digit4": "4",
+                "Digit5": "5",
+                "Digit6": "6",
+                "Digit7": "7",
+                "Digit8": "8",
+                "Digit9": "9",
+
+                // Special charecters
+                "Backquote": "`",
+                "Minus": "-",
+                "Equal": "-",
+                "BracketLeft": "[",
+                "BracketRight": "]",
+                "Backslash": "\\",
+                "Semicolon": ";",
+                "Quote": "'",
+                "Comma": ",",
+                "Period": ".",
+                "Slash": "/",
+
+                // Special keys
+                "Space": "space",
+                "Backspace": "backspace",
+                "Enter": "enter",
+                "Tab": "tab",
+
+                // Functional keys
+                "PrintScreen": "printscreen",
+                "Insert": "insert",
+                "Delete": "delete",
+                "Home": "home",
+                "End": "end",
+                "PageUp": "pageup",
+                "PageDown": "pagedown",
+                "Escape": "escape",
+
+                // Arrow keys
+                "ArrowUp": "up",
+                "ArrowDown": "down",
+                "ArrowLeft": "left",
+                "ArrowRight": "right",
+
+                // Function keys
+                "F1": "f1",
+                "F2": "f2",
+                "F3": "f3",
+                "F4": "f4",
+                "F5": "f5",
+                "F6": "f6",
+                "F7": "f7",
+                "F8": "f8",
+                "F9": "f9",
+                "F10": "f10",
+                "F11": "f11",
+                "F12": "f12",
+
+                // Modifier keys
+                "Command": "command",
+                "MetaLeft": "command",
+                "MetaRight": "command",
+                "AltLeft": "alt",
+                "AltRight": "alt",
+                "ControlLeft": "control",
+                "ControlRight": "control",
+                "ShiftLeft": "shift",
+                "ShiftRight": "right_shift",
+
+                // Control keys
+                "AudioVolumeMute": "audio_mute",
+                "AudioVolumeDown": "audio_vol_down",
+                "AudioVolumeUp": "audio_vol_up",
+                "MediaTrackPrevious": "audio_prev",
+                "MediaPlayPause": "audio_pause",
+                "MediaTrackNext": "audio_next",
+
+                // Numpad keys
+                "Numpad0": "numpad_0",
+                "Numpad1": "numpad_1",
+                "Numpad2": "numpad_2",
+                "Numpad3": "numpad_3",
+                "Numpad4": "numpad_4",
+                "Numpad5": "numpad_5",
+                "Numpad6": "numpad_6",
+                "Numpad7": "numpad_7",
+                "Numpad8": "numpad_8",
+                "Numpad9": "numpad_9",
+                "NumpadAdd": "+",
+                "NumpadSubtract": "-",
+                "NumpadMultiply": "*",
+                "NumpadDivide": "/",
+                "NumpadDecimal": ".",
+                "NumpadEnter": "enter"
+            }
+
+            var type = false
+            var key = keys[event.code]
+            if (key == undefined) return console.warn("Unknown Key " + event.code)
+
+            var modifiers = []
+            if (event.shiftKey) modifiers.push("shift")
+            if (event.ctrlKey) modifiers.push("control")
+            if (event.altKey) modifiers.push("alt")
+            else if (event.metaKey) modifiers.push("command")
+
+            // server.send(new Packet("keypress", { key, modifiers, type: false }).encode())
+        })
+
+        function getDisplays() {
+            fetch("/displays").then(res => res.text()).then(data => {
+                var message = Packet.decode(data)
+
+                console.log(message.data)
+
                 message.data.forEach(display => {
                     if (document.getElementById("display" + display.id) == null) {
                         var image = document.createElement("video")
@@ -243,12 +229,9 @@
                         })
                     }
                 })
-            }
-        })
-
-        server.addEventListener("close", event => {
-            console.log("Connection closed")
-        })
+            })
+        }
+        getDisplays()
     </script>
 </body>
 

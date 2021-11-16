@@ -4,8 +4,6 @@ module.exports = class Config {
     origin = "http://localhost:8000"
     port = 8000
 
-    fps = 5
-
     enableControl = false
 
     constructor(file) {
@@ -24,8 +22,6 @@ module.exports = class Config {
 
         this.port = config.port || this.port
         this.origin = config.origin || this.origin
-
-        this.fps = config.fps || this.fps
 
         this.enableControl = config.enableControl || false
     }

@@ -1,9 +1,6 @@
 {
     "name": "remote-desktop",
     "version": "1.0.0",
-    "engines": {
-        "node": "16"
-    },
     "scripts": {
         "start": "node index.js",
         "dev": "nodemon index.js"

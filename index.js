@@ -5,8 +5,6 @@ const config = new Config("./config.json")
 
 if (process.env.PORT) config.port = process.env.PORT
 
-var server = new Server(config.port, config.origin)
-
-server.start()
+new Server(config.port, config.origin, config.enableControl)
 
 console.log("Server started on " + config.port)

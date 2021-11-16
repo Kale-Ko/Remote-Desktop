@@ -289,7 +289,7 @@
 
                 fetch("/control", {
                     headers: {
-                        packet: controls[0]
+                        controls: controls[0]
                     }
                 }).then(res => res.text()).then(data => {
                     controls.splice(0, 1)

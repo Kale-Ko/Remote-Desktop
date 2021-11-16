@@ -24,11 +24,20 @@
         const fps = parseInt(localStorage.getItem("fps") || 5)
         const fixedFps = (localStorage.getItem("fixedFps") || "false") == "true" ? true : false
 
-        const scale = parseFloat(localStorage.getItem("scale") || 0.25)
+        const scale = parseFloat(localStorage.getItem("scale") || 0.50)
         const quality = parseInt(localStorage.getItem("quality") || 50)
 
         const pps = parseInt(localStorage.getItem("pps") || 2)
         const fixedPps = (localStorage.getItem("fixedPps") || "true") == "true" ? true : false
+
+        localStorage.setItem("fps", fps)
+        localStorage.setItem("fixedFps", fixedFps)
+
+        localStorage.setItem("scale", scale)
+        localStorage.setItem("quality", quality)
+
+        localStorage.setItem("pps", pps)
+        localStorage.setItem("fixedPps", fixedPps)
 
         const toSend = []
 

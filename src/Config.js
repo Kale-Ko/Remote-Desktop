@@ -1,8 +1,8 @@
 const fs = require("fs")
 
 module.exports = class Config {
-    origin = "http://localhost:3000"
-    port = 3000
+    origin = "http://localhost:8000"
+    port = 8000
 
     fps = 5
 

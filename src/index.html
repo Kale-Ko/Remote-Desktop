@@ -26,6 +26,8 @@
         server.addEventListener("open", event => {
             console.log("Connection opened")
 
+            server.send(new Packet("newconnection").encode())
+
             document.addEventListener("mousedown", event => {
                 if (document.fullscreenEnabled && !document.fullscreen) {
                     document.getElementById("displays").requestFullscreen()
@@ -222,26 +224,25 @@
             })
         })
 
-        var lastupdate = {}
-
         server.addEventListener("message", event => {
             var message = Packet.decode(event.data)
 
-            if (message.type == "display") {
-                if (message.data.timestamp <= lastupdate[message.data.id]) return
+            if (message.type == "displays") {
+                message.data.forEach(display => {
+                    if (document.getElementById("display" + display.id) == null) {
+                        var image = document.createElement("video")
+                        image.id = "display" + display.id
+                        var source = new MediaSource()
+                        image.src = URL.createObjectURL(source)
+                        image.width = window.innerWidth / message.data.length
+                        image.setAttribute("displayAttributes", JSON.stringify({ id: display.id, width: display.size.width, height: display.size.height }))
+                        document.getElementById("displays").appendChild(image)
 
-                lastupdate[message.data.id] = message.data.timestamp
-
-                if (document.getElementById("display" + message.data.id) != null) {
-                    document.getElementById("display" + message.data.id).src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
-                } else {
-                    var image = document.createElement("img")
-                    image.id = "display" + message.data.id
-                    image.src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
-                    image.width = window.innerWidth / message.data.totalAmount
-                    image.setAttribute("displayAttributes", JSON.stringify({ id: message.data.id, width: message.data.size.width, height: message.data.size.height }))
-                    document.getElementById("displays").appendChild(image)
-                }
+                        source.addEventListener("sourceopen", () => {
+                            var video = source.addSourceBuffer("video/mp4; codecs=\"avc1.64001e\"")
+                        })
+                    }
+                })
             }
         })
 

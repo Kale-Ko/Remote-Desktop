@@ -66,18 +66,20 @@ module.exports = class Server {
                                 res.end(new Packet("display", { id: message.data.id, size, status: "change", image }).encode())
                             })
                         } else if (req.url == "/control") {
-                            var message = Packet.decode(req.headers.packet)
+                            var controls = Packet.decode(req.headers.controls)
 
-                            if (message.type == "mousemove") {
-                                robot.moveMouseSmooth(message.data.x, message.data.y, 1)
-                            } else if (message.type == "mouseclick") {
-                                robot.mouseClick(message.data.button, false)
-                            } else if (message.type == "mousescroll") {
-                                robot.scrollMouse(message.data.x, message.data.y)
-                            } else if (message.type == "keypress") {
-                                if (message.data.type) robot.typeString(message.data.string)
-                                else robot.keyTap(message.data.key, message.data.modifiers)
-                            }
+                            controls.data.forEach(message => {
+                                if (message.type == "mousemove") {
+                                    robot.moveMouseSmooth(message.data.x, message.data.y, 1)
+                                } else if (message.type == "mouseclick") {
+                                    robot.mouseClick(message.data.button, false)
+                                } else if (message.type == "mousescroll") {
+                                    robot.scrollMouse(message.data.x, message.data.y)
+                                } else if (message.type == "keypress") {
+                                    if (message.data.type) robot.typeString(message.data.string)
+                                    else robot.keyTap(message.data.key, message.data.modifiers)
+                                }
+                            })
 
                             res.statusCode = 200
                             res.statusMessage = "Ok"

@@ -39,7 +39,13 @@
         localStorage.setItem("pps", pps)
         localStorage.setItem("fixedPps", fixedPps)
 
-        const toSend = []
+        var controls = []
+
+        var mouseX = -1
+        var mouseY = -1
+
+        var mouseScrollX = 0
+        var mouseScrollY = 0
 
         document.addEventListener("mousedown", event => {
             if (event.target.id.includes("display")) {
@@ -50,7 +56,7 @@
                 else if (event.button == 1) var button = "middle"
                 else if (event.button == 2) var button = "right"
 
-                quePacket({ url: "/control", data: new Packet("mouseclick", { button }).encode() })
+                controls.push(new Packet("mouseclick", { button }).encode())
             }
         })
 
@@ -61,8 +67,6 @@
             }
         })
 
-        var prevPos = { x: 0, y: 0 }
-
         document.addEventListener("mousemove", event => {
             if (event.target.id.includes("display")) {
                 var pos = { x: event.pageX - event.target.x, y: event.pageY - event.target.y }
@@ -70,16 +74,15 @@
                 pos.x = pos.x / (event.target.width / JSON.parse(event.target.getAttribute("displayAttributes")).width)
                 pos.y = pos.y / (event.target.height / JSON.parse(event.target.getAttribute("displayAttributes")).height)
 
-                if (prevPos == pos) return
-                else prevPos = pos
-
-                quePacket({ url: "/control", data: new Packet("mousemove", { x: pos.x, y: pos.y }).encode() })
+                mouseX = pos.x
+                mouseY = pos.y
             }
         })
 
         document.addEventListener("wheel", event => {
             if (event.target.id.includes("display")) {
-                quePacket({ url: "/control", data: new Packet("mousescroll", { x: event.deltaX, y: event.deltaY }).encode() })
+                mouseScrollX += event.deltaX
+                mouseScrollY += event.deltaY
             }
         })
 
@@ -225,7 +228,7 @@
             if (event.altKey) modifiers.push("alt")
             else if (event.metaKey) modifiers.push("command")
 
-            quePacket({ url: "/control", data: new Packet("keypress", { key, modifiers, type: false }).encode() })
+            controls.push(new Packet("keypress", { key, modifiers, type }).encode())
         })
 
         fetch("/displays").then(res => res.text()).then(data => {
@@ -271,36 +274,46 @@
             })
         })
 
-        function quePacket(packet) {
-            toSend.forEach(packet2 => {
-                if (packet.data.type == packet2.data.type) toSend.splice(toSend.indexOf(packet2), 1)
-            })
-
-            toSend.push(packet)
-        }
-
         if (fixedPps) {
             setInterval(() => {
-                if (toSend.length == 0) return
+                if (mouseX != -1 || mouseY != -1) controls.push(new Packet("mousemove", { x: mouseX, y: mouseY }).encode())
+                if (mouseScrollX != 0 || mouseScrollY != 0) controls.push(new Packet("mousescroll", { x: mouseScrollX, y: mouseScrollY }).encode())
 
-                fetch(toSend[0].url, {
+                mouseX = -1
+                mouseY = -1
+
+                mouseScrollX = 0
+                mouseScrollY = 0
+
+                if (controls.length == 0) return
+
+                fetch("/control", {
                     headers: {
-                        packet: toSend[0].data
+                        packet: controls[0]
                     }
                 }).then(res => res.text()).then(data => {
-                    toSend.splice(0, 1)
+                    controls.splice(0, 1)
                 })
             }, 1000 / pps)
         } else {
             function sendPackets() {
-                if (toSend.length == 0) requestAnimationFrame(sendPackets)
+                if (mouseX != -1 || mouseY != -1) controls.push(new Packet("mousemove", { x: mouseX, y: mouseY }).encode())
+                if (mouseScrollX != 0 || mouseScrollY != 0) controls.push(new Packet("mousescroll", { x: mouseScrollX, y: mouseScrollY }).encode())
+
+                mouseX = -1
+                mouseY = -1
+
+                mouseScrollX = 0
+                mouseScrollY = 0
+
+                if (controls.length == 0) requestAnimationFrame(sendPackets)
                 else {
-                    fetch(toSend[0].url, {
+                    fetch("/control", {
                         headers: {
-                            packet: toSend[0].data
+                            controls
                         }
                     }).then(res => res.text()).then(data => {
-                        toSend.splice(0, 1)
+                        var controls = []
 
                         sendPackets()
                     })

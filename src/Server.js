@@ -41,15 +41,7 @@ module.exports = class Server {
                                 for (var index = 0; index < displays.length; index++) {
                                     var size = imageSize(displays[index])
 
-                                    var image = await sharp(displays[index], { sequentialRead: true })
-                                        .webp({ quality: 50, alphaQuality: 0, reductionEffort: 6 })
-                                        .composite([{ input: mouse, top: Math.floor(robot.getMousePos().y / 2), left: Math.floor(robot.getMousePos().x / 2) }])
-                                        .resize(Math.floor(size.width / 2), Math.floor(size.height / 2))
-                                        .sharpen()
-                                        .normalize()
-                                        .toBuffer()
-
-                                    displaysdata.push({ id: index, size, image })
+                                    displaysdata.push({ id: index, size })
                                 }
 
                                 res.statusCode = 200
@@ -63,16 +55,15 @@ module.exports = class Server {
                                 var size = imageSize(display)
 
                                 var image = await sharp(display, { sequentialRead: true })
-                                    .webp({ quality: 50, alphaQuality: 0, reductionEffort: 6 })
+                                    .webp({ quality: message.data.quality, alphaQuality: 0, reductionEffort: 6 })
                                     .composite([{ input: mouse, top: Math.floor(robot.getMousePos().y / 2), left: Math.floor(robot.getMousePos().x / 2) }])
-                                    .resize(Math.floor(size.width / 2), Math.floor(size.height / 2))
+                                    .resize(Math.floor(size.width * message.data.scale), Math.floor(size.height * message.data.scale))
                                     .sharpen()
-                                    .normalize()
                                     .toBuffer()
 
                                 res.statusCode = 200
                                 res.statusMessage = "Ok"
-                                res.end(new Packet("display", { id: message.data.id, size, image }).encode())
+                                res.end(new Packet("display", { id: message.data.id, size, status: "change", image }).encode())
                             })
                         } else if (req.url == "/control") {
                             var message = Packet.decode(req.headers.packet)

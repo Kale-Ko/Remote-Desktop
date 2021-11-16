@@ -10,13 +10,11 @@ class Packet {
     }
 
     encode() {
-        this.data.timestamp = new Date().getTime()
-
-        return btoa(JSON.stringify({ type: this.type, data: this.data }))
+        return JSON.stringify({ type: this.type, data: this.data })
     }
 
     static decode(data) {
-        data = JSON.parse(atob(data))
+        data = JSON.parse(data)
 
         return new Packet(data.type, data.data)
     }

@@ -24,8 +24,11 @@
         const fps = 5
         const fixedFps = false
 
+        const scale = 0.25
+        const quality = 25
+
         const pps = 2
-        const fixedPps = false
+        const fixedPps = true
 
         const toSend = []
 
@@ -231,24 +234,24 @@
                         setInterval(() => {
                             fetch("/display", {
                                 headers: {
-                                    packet: new Packet("display", { id: display.id }).encode()
+                                    packet: new Packet("display", { id: display.id, scale, quality }).encode()
                                 }
                             }).then(res => res.text()).then(data => {
                                 var message = Packet.decode(data)
 
-                                image.src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
+                                if (message.data.status == "change") image.src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
                             })
                         }, 1000 / fps)
                     } else {
                         function getScreen() {
                             fetch("/display", {
                                 headers: {
-                                    packet: new Packet("display", { id: display.id }).encode()
+                                    packet: new Packet("display", { id: display.id, scale, quality }).encode()
                                 }
                             }).then(res => res.text()).then(data => {
                                 var message = Packet.decode(data)
 
-                                image.src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
+                                if (message.data.status == "change") image.src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
 
                                 getScreen()
                             })
@@ -269,30 +272,28 @@
 
         if (fixedPps) {
             setInterval(() => {
-                toSend.forEach(packet => {
-                    fetch(packet.url, {
-                        headers: {
-                            packet: packet.packet
-                        }
-                    }).then(res => res.text()).then(data => {
-                        toSend.splice(toSend.indexOf(packet), 1)
-                    })
+                if (toSend.length == 0) return
+
+                fetch(toSend[0].url, {
+                    headers: {
+                        packet: toSend[0].data
+                    }
+                }).then(res => res.text()).then(data => {
+                    toSend.splice(0, 1)
                 })
             }, 1000 / pps)
         } else {
             function sendPackets() {
                 if (toSend.length == 0) requestAnimationFrame(sendPackets)
                 else {
-                    toSend.forEach(packet => {
-                        fetch(packet.url, {
-                            headers: {
-                                packet: packet.data
-                            }
-                        }).then(res => res.text()).then(data => {
-                            toSend.splice(toSend.indexOf(packet), 1)
+                    fetch(toSend[0].url, {
+                        headers: {
+                            packet: toSend[0].data
+                        }
+                    }).then(res => res.text()).then(data => {
+                        toSend.splice(0, 1)
 
-                            sendPackets()
-                        })
+                        sendPackets()
                     })
                 }
             }

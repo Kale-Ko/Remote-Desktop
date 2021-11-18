@@ -5,6 +5,7 @@ const screenshot = require("screenshot-desktop")
 const jimp = require("jimp")
 const imageSize = require("image-size")
 const robot = require("robotjs")
+const path = require("path")
 
 module.exports = class Server {
     server
@@ -16,7 +17,7 @@ module.exports = class Server {
         if (port == undefined || port == null) throw new Error('Missing paramiter "port"')
         if (origin == undefined || origin == null) throw new Error('Missing paramiter "origin"')
 
-        jimp.read("./assets/mouse.png").then(mouse => {
+        jimp.read(path.join(__dirname, "../assets/mouse.png")).then(mouse => {
             // .resize(Math.floor(size.width / 4), Math.floor(size.height / 4))
             mouse.scale(0.25).quality(100)
 
@@ -24,11 +25,11 @@ module.exports = class Server {
                 if (req.url == "/") {
                     res.statusCode = 200
                     res.statusMessage = "Ok"
-                    res.end(fs.readFileSync("./src/index.html"))
+                    res.end(fs.readFileSync(path.join(__dirname, "./index.html")))
                 } else if (req.url == "/Packet.js") {
                     res.statusCode = 200
                     res.statusMessage = "Ok"
-                    res.end(fs.readFileSync("./src/Packet.js"))
+                    res.end(fs.readFileSync(path.join(__dirname, "./Packet.js")))
                 } else if (req.url == "/displays") {
                     screenshot.all().then(async displays => {
                         var displaysdata = []

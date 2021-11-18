@@ -16,8 +16,7 @@ module.exports = class Server {
         if (origin == undefined || origin == null) throw new Error('Missing paramiter "origin"')
 
         jimp.read(path.join(__dirname, "../assets/mouse.png")).then(mouse => {
-            // .resize(Math.floor(size.width / 4), Math.floor(size.height / 4))
-            mouse.scale(0.25).quality(100)
+            mouse.quality(100)
 
             this.server = http.createServer((req, res) => {
                 if (req.url == "/") {
@@ -52,7 +51,7 @@ module.exports = class Server {
 
                     new jimp({ data: Buffer.from(rawDesktop), width: screen.width, height: screen.height })
                         .quality(message.data.quality)
-                        .composite(mouse, Math.floor(robot.getMousePos().y * message.data.scale), Math.floor(robot.getMousePos().x * message.data.scale))
+                        .composite(mouse, Math.floor(robot.getMousePos().y), Math.floor(robot.getMousePos().x))
                         .scale(message.data.scale)
                         .getBufferAsync(jimp.MIME_PNG).then(image => {
                             res.statusCode = 200

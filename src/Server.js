@@ -1,9 +1,7 @@
 const fs = require("fs")
 const http = require("http")
 const Packet = require("./Packet.js")
-const screenshot = require("screenshot-desktop")
 const jimp = require("jimp")
-const imageSize = require("image-size")
 const robot = require("robotjs")
 const path = require("path")
 
@@ -31,37 +29,36 @@ module.exports = class Server {
                     res.statusMessage = "Ok"
                     res.end(fs.readFileSync(path.join(__dirname, "./Packet.js")))
                 } else if (req.url == "/displays") {
-                    screenshot.all().then(async displays => {
-                        var displaysdata = []
-
-                        for (var index = 0; index < displays.length; index++) {
-                            var size = imageSize(displays[index])
-
-                            displaysdata.push({ id: index, size })
-                        }
-
-                        res.statusCode = 200
-                        res.statusMessage = "Ok"
-                        res.end(new Packet("displays", displaysdata).encode())
-                    })
+                    res.statusCode = 200
+                    res.statusMessage = "Ok"
+                    res.end(new Packet("displays", [{ id: 0, size: robot.getScreenSize() }]).encode())
                 } else if (req.url == "/display") {
                     var message = Packet.decode(req.headers.packet)
 
-                    screenshot({ screen: message.data.id }).then(async display => {
-                        var size = imageSize(display)
+                    var screen = robot.screen.capture()
+                    var rawDesktop = []
 
-                        jimp.read(display).then(image => {
-                            image
-                                .quality(message.data.quality)
-                                .composite(mouse, Math.floor(robot.getMousePos().y * message.data.scale), Math.floor(robot.getMousePos().x * message.data.scale))
-                                .scale(message.data.scale)
-                                .getBufferAsync(jimp.MIME_JPEG).then(image => {
-                                    res.statusCode = 200
-                                    res.statusMessage = "Ok"
-                                    res.end(new Packet("display", { id: message.data.id, size, status: "change", image }).encode())
-                                })
-                        })
+                    var index = 0
+                    screen.image.forEach(value => {
+                        if (index % 4 == 3) {
+                            rawDesktop[index - 3] = screen.image[index - 1]
+                            rawDesktop[index - 2] = screen.image[index - 2]
+                            rawDesktop[index - 1] = screen.image[index - 3]
+                            rawDesktop[index] = screen.image[index]
+                        }
+
+                        index++
                     })
+
+                    new jimp({ data: Buffer.from(rawDesktop), width: screen.width, height: screen.height })
+                        .quality(message.data.quality)
+                        .composite(mouse, Math.floor(robot.getMousePos().y * message.data.scale), Math.floor(robot.getMousePos().x * message.data.scale))
+                        .scale(message.data.scale)
+                        .getBufferAsync(jimp.MIME_PNG).then(image => {
+                            res.statusCode = 200
+                            res.statusMessage = "Ok"
+                            res.end(new Packet("display", { id: message.data.id, size: { width: screen.width, height: screen.height }, status: "change", image }).encode())
+                        })
                 } else if (req.url == "/control") {
                     var message = Packet.decode(req.headers.packet)
 

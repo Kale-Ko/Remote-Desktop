@@ -6,9 +6,7 @@
         "dev": "nodemon index.js"
     },
     "dependencies": {
-        "image-size": "^1.0.0",
         "jimp": "^0.16.1",
-        "robotjs": "^0.6.0",
-        "screenshot-desktop": "^1.12.7"
+        "robotjs": "^0.6.0"
     }
 }

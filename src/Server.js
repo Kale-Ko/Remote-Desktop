@@ -1,3 +1,10 @@
+/**
+    @license
+    MIT License
+    Copyright (c) 2021 Kale Ko
+    See https://kaleko.ga/license.txt
+*/
+
 const fs = require("fs")
 const http = require("http")
 const Packet = require("./Packet.js")

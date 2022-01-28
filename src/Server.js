@@ -36,11 +36,11 @@ module.exports = class Server {
                             if (req.url == "/") {
                                 res.statusCode = 200
                                 res.statusMessage = "Ok"
-                                res.end(fs.readFileSync(path.join(__dirname, "./index.html")))
+                                res.end(fs.readFileSync("./src/index.html"))
                             } else if (req.url == "/Packet.js") {
                                 res.statusCode = 200
                                 res.statusMessage = "Ok"
-                                res.end(fs.readFileSync(path.join(__dirname, "./Packet.js")))
+                                res.end(fs.readFileSync("./src/Packet.js"))
                             } else if (req.url == "/displays") {
                                 screenshot.listDisplays().then(displays => {
                                     var displaydata = []

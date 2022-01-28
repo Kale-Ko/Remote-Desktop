@@ -12,6 +12,6 @@ const config = new Config("./config.json")
 
 if (process.env.PORT) config.port = process.env.PORT
 
-new Server(config.port, config.origin, config.enableControl)
+var server = new Server(config.port, config.origin, config.enableControl)
 
-console.log("Server started on " + config.port)
+console.log("Server started at " + server.origin)

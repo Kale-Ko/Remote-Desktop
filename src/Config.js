@@ -11,8 +11,6 @@ module.exports = class Config {
     origin = "http://localhost:8000"
     port = 8000
 
-    enableControl = false
-
     constructor(file) {
         if (file == undefined || file == null) throw new Error('Missing paramiter "file"')
 
@@ -29,7 +27,5 @@ module.exports = class Config {
 
         this.port = config.port || this.port
         this.origin = config.origin || this.origin
-
-        this.enableControl = config.enableControl || false
     }
 }

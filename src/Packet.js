@@ -1,91 +1,62 @@
-class LZW {
-    static compress(uncompressed) {
-        let dictionary = {};
-        for (let i = 0; i < 256; i++) {
-            dictionary[String.fromCharCode(i)] = i;
-        }
-
-        let word = "";
-        let result = [];
-        let dictSize = 256;
-
-        for (let i = 0, len = uncompressed.length; i < len; i++) {
-            let curChar = uncompressed[i];
-            let joinedWord = word + curChar;
-
-            if (dictionary.hasOwnProperty(joinedWord)) {
-                word = joinedWord;
-            }
-            else {
-                result.push(dictionary[word]);
-                dictionary[joinedWord] = dictSize++;
-                word = curChar;
-            }
-        }
-
-        if (word !== "") {
-            result.push(dictionary[word]);
-        }
-
-        return result;
-    }
-
-    static decompress(compressed) {
-        let dictionary = {};
-        for (let i = 0; i < 256; i++) {
-            dictionary[i] = String.fromCharCode(i);
-        }
-
-        let word = String.fromCharCode(compressed[0]);
-        let result = word;
-        let entry = "";
-        let dictSize = 256;
-
-        for (let i = 1, len = compressed.length; i < len; i++) {
-            let curNumber = compressed[i];
-
-            if (dictionary[curNumber] !== undefined) {
-                entry = dictionary[curNumber];
-            }
-            else {
-                if (curNumber === dictSize) {
-                    entry = word + word[0];
-                }
-                else {
-                    throw new Error("Error in processing");
-                }
-            }
-
-            result += entry;
-
-            dictionary[dictSize++] = word + entry[0];
-
-            word = entry;
-        }
-
-        return result;
-    }
-}
-
 class Packet {
+    static Type = {
+        ConnectionRequested: 0,
+        ConnectionAccepted: 1,
+        AuthRequired: 2,
+        AuthAttempt: 3,
+        InvalidCredentials: 4,
+        Error: {
+            Packet: 5,
+            Type: {
+                InvalidPacket: 0,
+                UnknownPacket: 1,
+                AuthNotEnabled: 2,
+                AlreadyAuthed: 3,
+                NotAuthed: 4,
+                UnknownDisplay: 5
+            }
+        },
+        RequestDisplays: 7,
+        Displays: 8,
+        RequestDisplay: 9,
+        Display: 10,
+        Control: {
+            Packet: 11,
+            Type: {
+                MouseMove: 0,
+                MouseClick: {
+                    Packet: 1,
+                    Type: {
+                        Left: "left",
+                        Right: "right",
+                        Middle: "middle"
+                    }
+                },
+                MouseScroll: 2,
+                KeyPress: 3
+            }
+        }
+    }
+
     type
     data
 
     constructor(type, data) {
         if (type == undefined || type == null) throw new Error('Missing paramiter "type"')
+        if (data == undefined || data == null) throw new Error('Missing paramiter "data"')
 
         this.type = type
-        this.data = data || {}
+        this.data = data
     }
 
     encode() {
-        return JSON.stringify(LZW.compress(JSON.stringify({ type: this.type, data: this.data })))
+        return JSON.stringify({ x: this.type, y: this.data })
     }
 
     static decode(data) {
-        data = JSON.parse(LZW.decompress(JSON.parse(data)))
+        data = JSON.parse(data)
 
-        return new Packet(data.type, data.data)
+        return new Packet(data.x, data.y)
     }
 }
 

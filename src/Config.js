@@ -1,8 +1,34 @@
 const fs = require("fs")
 
-module.exports = class Config {
-    origin = "http://localhost:8000"
-    port = 8000
+class Config {
+    host = "http://localhost:8080"
+
+    https = {
+        enabled: false,
+        host: "http://localhost:8433",
+        cert: {
+            public: null,
+            private: null
+        }
+    }
+
+    authentication = {
+        enabled: false,
+        useUsername: false,
+        username: null,
+        password: null
+    }
+
+    stream = {
+        maxScale: 0.5,
+        maxFps: 10
+    }
+
+    control = {
+        enabled: false,
+        keyboard: true,
+        mouse: true
+    }
 
     constructor(file) {
         if (file == undefined || file == null) throw new Error('Missing paramiter "file"')
@@ -18,7 +44,17 @@ module.exports = class Config {
             throw new Error("Config file is not a valid json")
         }
 
-        this.port = config.port || this.port
-        this.origin = config.origin || this.origin
+        this.host = config.host || this.host
+
+        this.https = config.https || this.https
+
+        this.authentication = config.authentication || this.authentication
+
+        this.stream = config.stream || this.stream
+
+        this.control = config.control || this.control
     }
 }
+
+if (this.window) window.Config = Config
+else if (module) module.exports = Config

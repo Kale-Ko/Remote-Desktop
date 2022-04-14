@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en-US">
+<html lang="en">
 
 <head>
     <title>Remote Desktop</title>
@@ -13,314 +13,306 @@
         img {
             float: left;
         }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
+    <div id="authContainer" class="hidden">
+        <div id="usernameContainer" class="hidden">
+            <label for="username">Username: </label>
+            <input id="username" type="text">
+        </div>
+
+        <div id="passwordContainer">
+            <label for="password">Password: </label>
+            <input id="password" type="text">
+        </div>
+
+        <button id="login" type="button">Login</button>
+
+        <p id="error"></p>
+    </div>
+
     <div id="displays"></div>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script src="/Packet.js"></script>
     <script>
-        const fps = parseInt(localStorage.getItem("fps") || 5)
-        const fixedFps = (localStorage.getItem("fixedFps") || "false") == "true" ? true : false
+        var settings = {
+            fps: 10,
+            fixedFps: false,
+            pps: 3,
+            scale: 1,
+            quality: 75
+        }
 
-        const scale = parseFloat(localStorage.getItem("scale") || 0.50)
-        const quality = parseInt(localStorage.getItem("quality") || 50)
+        const socket = io()
 
-        const pps = parseInt(localStorage.getItem("pps") || 2)
-        const fixedPps = (localStorage.getItem("fixedPps") || "true") == "true" ? true : false
+        socket.on("packet", data => {
+            var message
+            try {
+                message = Packet.decode(data)
+            } catch (err) {
+                console.error("Could not parse packet")
 
-        localStorage.setItem("fps", fps)
-        localStorage.setItem("fixedFps", fixedFps)
-
-        localStorage.setItem("scale", scale)
-        localStorage.setItem("quality", quality)
-
-        localStorage.setItem("pps", pps)
-        localStorage.setItem("fixedPps", fixedPps)
-
-        var controls = []
-
-        var mouseX = -1
-        var mouseY = -1
-
-        var mouseScrollX = 0
-        var mouseScrollY = 0
-
-        document.addEventListener("mousedown", event => {
-            if (event.target.id.includes("display")) {
-                event.stopImmediatePropagation()
-                event.preventDefault()
-
-                if (event.button == 0) var button = "left"
-                else if (event.button == 1) var button = "middle"
-                else if (event.button == 2) var button = "right"
-
-                controls.push(new Packet("mouseclick", { button }).encode())
-            }
-        })
-
-        document.addEventListener("contextmenu", event => {
-            if (event.target.id.includes("display")) {
-                event.stopImmediatePropagation()
-                event.preventDefault()
-            }
-        })
-
-        document.addEventListener("mousemove", event => {
-            if (event.target.id.includes("display")) {
-                var pos = { x: event.pageX - event.target.x, y: event.pageY - event.target.y }
-
-                pos.x = pos.x / (event.target.width / JSON.parse(event.target.getAttribute("displayAttributes")).width)
-                pos.y = pos.y / (event.target.height / JSON.parse(event.target.getAttribute("displayAttributes")).height)
-
-                mouseX = pos.x
-                mouseY = pos.y
-            }
-        })
-
-        document.addEventListener("wheel", event => {
-            if (event.target.id.includes("display")) {
-                mouseScrollX += event.deltaX
-                mouseScrollY += event.deltaY
-            }
-        })
-
-        document.addEventListener("keydown", event => {
-            event.stopImmediatePropagation()
-            event.preventDefault()
-
-            var keys = {
-                // A-Z
-                "KeyA": "a",
-                "KeyB": "b",
-                "KeyC": "c",
-                "KeyD": "d",
-                "KeyE": "e",
-                "KeyF": "f",
-                "KeyG": "g",
-                "KeyH": "h",
-                "KeyI": "i",
-                "KeyJ": "j",
-                "KeyK": "k",
-                "KeyL": "l",
-                "KeyM": "m",
-                "KeyN": "n",
-                "KeyO": "o",
-                "KeyP": "p",
-                "KeyQ": "q",
-                "KeyR": "r",
-                "KeyS": "s",
-                "KeyT": "t",
-                "KeyU": "u",
-                "KeyV": "v",
-                "KeyW": "w",
-                "KeyX": "x",
-                "KeyY": "y",
-                "KeyZ": "z",
-
-                // 0-9
-                "Digit0": "0",
-                "Digit1": "1",
-                "Digit2": "2",
-                "Digit3": "3",
-                "Digit4": "4",
-                "Digit5": "5",
-                "Digit6": "6",
-                "Digit7": "7",
-                "Digit8": "8",
-                "Digit9": "9",
-
-                // Special charecters
-                "Backquote": "`",
-                "Minus": "-",
-                "Equal": "-",
-                "BracketLeft": "[",
-                "BracketRight": "]",
-                "Backslash": "\\",
-                "Semicolon": ";",
-                "Quote": "'",
-                "Comma": ",",
-                "Period": ".",
-                "Slash": "/",
-
-                // Special keys
-                "Space": "space",
-                "Backspace": "backspace",
-                "Enter": "enter",
-                "Tab": "tab",
-
-                // Functional keys
-                "PrintScreen": "printscreen",
-                "Insert": "insert",
-                "Delete": "delete",
-                "Home": "home",
-                "End": "end",
-                "PageUp": "pageup",
-                "PageDown": "pagedown",
-                "Escape": "escape",
-
-                // Arrow keys
-                "ArrowUp": "up",
-                "ArrowDown": "down",
-                "ArrowLeft": "left",
-                "ArrowRight": "right",
-
-                // Function keys
-                "F1": "f1",
-                "F2": "f2",
-                "F3": "f3",
-                "F4": "f4",
-                "F5": "f5",
-                "F6": "f6",
-                "F7": "f7",
-                "F8": "f8",
-                "F9": "f9",
-                "F10": "f10",
-                "F11": "f11",
-                "F12": "f12",
-
-                // Modifier keys
-                "Command": "command",
-                "MetaLeft": "command",
-                "MetaRight": "command",
-                "AltLeft": "alt",
-                "AltRight": "alt",
-                "ControlLeft": "control",
-                "ControlRight": "control",
-                "ShiftLeft": "shift",
-                "ShiftRight": "right_shift",
-
-                // Control keys
-                "AudioVolumeMute": "audio_mute",
-                "AudioVolumeDown": "audio_vol_down",
-                "AudioVolumeUp": "audio_vol_up",
-                "MediaTrackPrevious": "audio_prev",
-                "MediaPlayPause": "audio_pause",
-                "MediaTrackNext": "audio_next",
-
-                // Numpad keys
-                "Numpad0": "numpad_0",
-                "Numpad1": "numpad_1",
-                "Numpad2": "numpad_2",
-                "Numpad3": "numpad_3",
-                "Numpad4": "numpad_4",
-                "Numpad5": "numpad_5",
-                "Numpad6": "numpad_6",
-                "Numpad7": "numpad_7",
-                "Numpad8": "numpad_8",
-                "Numpad9": "numpad_9",
-                "NumpadAdd": "+",
-                "NumpadSubtract": "-",
-                "NumpadMultiply": "*",
-                "NumpadDivide": "/",
-                "NumpadDecimal": ".",
-                "NumpadEnter": "enter"
+                return
             }
 
-            var type = false
-            var key = keys[event.code]
-            if (key == undefined) return console.warn("Unknown Key " + event.code)
+            if (message.type == Packet.Type.ConnectionAccepted) {
+                document.getElementById("authContainer").classList.add("hidden")
 
-            var modifiers = []
-            if (event.shiftKey) modifiers.push("shift")
-            if (event.ctrlKey) modifiers.push("control")
-            if (event.altKey) modifiers.push("alt")
-            else if (event.metaKey) modifiers.push("command")
+                document.addEventListener("mousedown", event => {
+                    if (event.target.id.includes("display")) {
+                        event.stopImmediatePropagation()
+                        event.preventDefault()
 
-            controls.push(new Packet("keypress", { key, modifiers, type }).encode())
-        })
+                        if (event.button == 0) var button = "Left"
+                        else if (event.button == 1) var button = "Middle"
+                        else if (event.button == 2) var button = "Right"
 
-        fetch("/displays").then(res => res.text()).then(data => {
-            var message = Packet.decode(data)
-
-            message.data.forEach(display => {
-                if (document.getElementById("display" + display.id) == null) {
-                    var image = document.createElement("img")
-                    image.id = "display" + display.id
-                    image.width = window.innerWidth / message.data.length
-                    image.setAttribute("displayAttributes", JSON.stringify({ id: display.id, width: display.size.width, height: display.size.height }))
-                    document.getElementById("displays").appendChild(image)
-
-                    if (fixedFps) {
-                        setInterval(() => {
-                            fetch("/display", {
-                                headers: {
-                                    packet: new Packet("display", { id: display.id, scale, quality }).encode()
-                                }
-                            }).then(res => res.text()).then(data => {
-                                var message = Packet.decode(data)
-
-                                if (message.data.status == "change") image.src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
-                            })
-                        }, 1000 / fps)
-                    } else {
-                        function getScreen() {
-                            fetch("/display", {
-                                headers: {
-                                    packet: new Packet("display", { id: display.id, scale, quality }).encode()
-                                }
-                            }).then(res => res.text()).then(data => {
-                                var message = Packet.decode(data)
-
-                                if (message.data.status == "change") image.src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
-
-                                getScreen()
-                            })
-                        }
-                        getScreen()
-                    }
-                }
-            })
-        })
-
-        if (fixedPps) {
-            setInterval(() => {
-                if (mouseX != -1 || mouseY != -1) controls.push(new Packet("mousemove", { x: mouseX, y: mouseY }).encode())
-                if (mouseScrollX != 0 || mouseScrollY != 0) controls.push(new Packet("mousescroll", { x: mouseScrollX, y: mouseScrollY }).encode())
-
-                mouseX = -1
-                mouseY = -1
-
-                mouseScrollX = 0
-                mouseScrollY = 0
-
-                if (controls.length == 0) return
-
-                fetch("/control", {
-                    headers: {
-                        packet: new Packet("controls", controls).encode()
+                        socket.emit("packet", new Packet(Packet.Type.Control.Packet, { type: Packet.Type.Control.Type.MouseClick.Packet, data: { type: Packet.Type.Control.Type.MouseClick.Type[button] } }).encode())
                     }
                 })
 
-                controls = []
-            }, 1000 / pps)
-        } else {
-            function sendPackets() {
-                if (mouseX != -1 || mouseY != -1) controls.push(new Packet("mousemove", { x: mouseX, y: mouseY }).encode())
-                if (mouseScrollX != 0 || mouseScrollY != 0) controls.push(new Packet("mousescroll", { x: mouseScrollX, y: mouseScrollY }).encode())
+                document.addEventListener("contextmenu", event => {
+                    if (event.target.id.includes("display")) {
+                        event.stopImmediatePropagation()
+                        event.preventDefault()
+                    }
+                })
 
-                mouseX = -1
-                mouseY = -1
+                var mouseX = -1
+                var mouseY = -1
 
-                mouseScrollX = 0
-                mouseScrollY = 0
+                var mouseScrollX = 0
+                var mouseScrollY = 0
 
-                if (controls.length == 0) requestAnimationFrame(sendPackets)
-                else {
-                    fetch("/control", {
-                        headers: {
-                            packet: new Packet("controls", controls).encode()
+                document.addEventListener("mousemove", event => {
+                    if (event.target.id.includes("display")) {
+                        var pos = { x: event.pageX - event.target.x, y: event.pageY - event.target.y }
+
+                        pos.x = pos.x / (event.target.width / JSON.parse(event.target.getAttribute("displayAttributes")).width)
+                        pos.y = pos.y / (event.target.height / JSON.parse(event.target.getAttribute("displayAttributes")).height)
+
+                        mouseX = pos.x
+                        mouseY = pos.y
+                    }
+                })
+
+                document.addEventListener("wheel", event => {
+                    if (event.target.id.includes("display")) {
+                        mouseScrollX += event.deltaX
+                        mouseScrollY += event.deltaY
+                    }
+                })
+
+                setInterval(() => {
+                    if (mouseX != -1 && mouseY != -1) {
+                        socket.emit("packet", new Packet(Packet.Type.Control.Packet, { type: Packet.Type.Control.Type.MouseMove, data: { x: Math.round(mouseX), y: Math.round(mouseY) } }).encode())
+
+                        mouseX = -1
+                        mouseY = -1
+                    }
+
+                    if (mouseScrollX != 0 && mouseScrollY != 0) {
+                        socket.emit("packet", new Packet(Packet.Type.Control.Packet, { type: Packet.Type.Control.Type.MouseScroll, data: { x: Math.round(mouseScrollX), y: Math.round(mouseScrollY) } }).encode())
+
+                        mouseScrollX = 0
+                        mouseScrollY = 0
+                    }
+                }, 1000 / settings.pps)
+
+                document.addEventListener("keydown", event => {
+                    event.stopImmediatePropagation()
+                    event.preventDefault()
+
+                    var keys = {
+                        // A-Z
+                        "KeyA": "a",
+                        "KeyB": "b",
+                        "KeyC": "c",
+                        "KeyD": "d",
+                        "KeyE": "e",
+                        "KeyF": "f",
+                        "KeyG": "g",
+                        "KeyH": "h",
+                        "KeyI": "i",
+                        "KeyJ": "j",
+                        "KeyK": "k",
+                        "KeyL": "l",
+                        "KeyM": "m",
+                        "KeyN": "n",
+                        "KeyO": "o",
+                        "KeyP": "p",
+                        "KeyQ": "q",
+                        "KeyR": "r",
+                        "KeyS": "s",
+                        "KeyT": "t",
+                        "KeyU": "u",
+                        "KeyV": "v",
+                        "KeyW": "w",
+                        "KeyX": "x",
+                        "KeyY": "y",
+                        "KeyZ": "z",
+
+                        // 0-9
+                        "Digit0": "0",
+                        "Digit1": "1",
+                        "Digit2": "2",
+                        "Digit3": "3",
+                        "Digit4": "4",
+                        "Digit5": "5",
+                        "Digit6": "6",
+                        "Digit7": "7",
+                        "Digit8": "8",
+                        "Digit9": "9",
+
+                        // Special charecters
+                        "Backquote": "`",
+                        "Minus": "-",
+                        "Equal": "-",
+                        "BracketLeft": "[",
+                        "BracketRight": "]",
+                        "Backslash": "\\",
+                        "Semicolon": ";",
+                        "Quote": "'",
+                        "Comma": ",",
+                        "Period": ".",
+                        "Slash": "/",
+
+                        // Special keys
+                        "Space": "space",
+                        "Backspace": "backspace",
+                        "Enter": "enter",
+                        "Tab": "tab",
+
+                        // Functional keys
+                        "PrintScreen": "printscreen",
+                        "Insert": "insert",
+                        "Delete": "delete",
+                        "Home": "home",
+                        "End": "end",
+                        "PageUp": "pageup",
+                        "PageDown": "pagedown",
+                        "Escape": "escape",
+
+                        // Arrow keys
+                        "ArrowUp": "up",
+                        "ArrowDown": "down",
+                        "ArrowLeft": "left",
+                        "ArrowRight": "right",
+
+                        // Function keys
+                        "F1": "f1",
+                        "F2": "f2",
+                        "F3": "f3",
+                        "F4": "f4",
+                        "F5": "f5",
+                        "F6": "f6",
+                        "F7": "f7",
+                        "F8": "f8",
+                        "F9": "f9",
+                        "F10": "f10",
+                        "F11": "f11",
+                        "F12": "f12",
+
+                        // Modifier keys
+                        "Command": "command",
+                        "MetaLeft": "command",
+                        "MetaRight": "command",
+                        "AltLeft": "alt",
+                        "AltRight": "alt",
+                        "ControlLeft": "control",
+                        "ControlRight": "control",
+                        "ShiftLeft": "shift",
+                        "ShiftRight": "right_shift",
+
+                        // Control keys
+                        "AudioVolumeMute": "audio_mute",
+                        "AudioVolumeDown": "audio_vol_down",
+                        "AudioVolumeUp": "audio_vol_up",
+                        "MediaTrackPrevious": "audio_prev",
+                        "MediaPlayPause": "audio_pause",
+                        "MediaTrackNext": "audio_next",
+
+                        // Numpad keys
+                        "Numpad0": "numpad_0",
+                        "Numpad1": "numpad_1",
+                        "Numpad2": "numpad_2",
+                        "Numpad3": "numpad_3",
+                        "Numpad4": "numpad_4",
+                        "Numpad5": "numpad_5",
+                        "Numpad6": "numpad_6",
+                        "Numpad7": "numpad_7",
+                        "Numpad8": "numpad_8",
+                        "Numpad9": "numpad_9",
+                        "NumpadAdd": "+",
+                        "NumpadSubtract": "-",
+                        "NumpadMultiply": "*",
+                        "NumpadDivide": "/",
+                        "NumpadDecimal": ".",
+                        "NumpadEnter": "enter"
+                    }
+
+                    var key = keys[event.code]
+                    if (key == undefined) return console.warn("Unknown Key " + event.code)
+
+                    socket.emit("packet", new Packet(Packet.Type.Control.Packet, { type: Packet.Type.Control.Type.KeyPress, data: { key, modifiers: { shift: event.shiftKey, control: event.ctrlKey, alt: event.altKey, command: event.metaKey } } }).encode())
+                })
+
+                socket.emit("packet", new Packet(Packet.Type.RequestDisplays, {}).encode())
+            } else if (message.type == Packet.Type.Displays) {
+                message.data.forEach(display => {
+                    if (document.getElementById("display" + display.id) == null) {
+                        var image = document.createElement("img")
+                        image.id = "display" + display.id
+                        image.width = window.innerWidth / message.data.length
+                        image.setAttribute("displayAttributes", JSON.stringify({ id: display.id, width: display.size.width, height: display.size.height }))
+                        document.getElementById("displays").appendChild(image)
+
+                        if (settings.fixedFps) {
+                            setInterval(() => {
+                                socket.emit("packet", new Packet(Packet.Type.RequestDisplay, { id: display.id, scale: settings.scale, quality: settings.quality }).encode())
+                            }, 1000 / settings.fps)
+                        } else {
+                            socket.emit("packet", new Packet(Packet.Type.RequestDisplay, { id: display.id, scale: settings.scale, quality: settings.quality }).encode())
                         }
-                    }).then(res => res.text()).then(data => {
-                        controls = []
+                    }
+                })
+            } else if (message.type == Packet.Type.Display) {
+                document.getElementById("display" + message.data.id).src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
 
-                        sendPackets()
-                    })
+                if (!settings.fixedFps) {
+                    socket.emit("packet", new Packet(Packet.Type.RequestDisplay, { id: message.data.id, scale: settings.scale, quality: settings.quality }).encode())
+                }
+            } else if (message.type == Packet.Type.AuthRequired) {
+                document.getElementById("authContainer").classList.remove("hidden")
+
+                if (message.data.useUsername) {
+                    document.getElementById("usernameContainer").classList.remove("hidden")
+                }
+
+                document.getElementById("login").addEventListener("click", () => {
+                    document.getElementById("error").innerHTML = ""
+
+                    socket.emit("packet", new Packet(Packet.Type.AuthAttempt, { username: (message.data.useUsername ? document.getElementById("username").value : null), password: document.getElementById("password").value }).encode())
+                })
+            } else if (message.type == Packet.Type.InvalidCredentials) {
+                document.getElementById("error").innerHTML = "Invalid credentials"
+            } else if (message.type == Packet.Type.Error.Packet) {
+                if (message.data.type == Packet.Type.Error.Type.NotAuthed) {
+                    window.location.reload()
+                } else {
+                    console.error("Error from server: ", message.data.message)
                 }
             }
-            sendPackets()
-        }
+        })
+
+        socket.emit("packet", new Packet(Packet.Type.ConnectionRequested, {}).encode())
     </script>
 </body>
 

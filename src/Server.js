@@ -18,11 +18,23 @@ module.exports = class Server {
 
         this.config = config
 
+        robot.setKeyboardDelay(0)
+        robot.setMouseDelay(0)
+
         var mouse = sharp("./assets/mouse.png")
 
         mouse.metadata().then(({ width, height }) => {
             mouse.webp({ quality: 100, alphaQuality: 0, reductionEffort: 6 }).resize(Math.round(width * 0.5), Math.round(height * 0.5)).toBuffer().then(mouse => {
                 var listener = (req, res) => {
+                    var url = new URL("http" + (req.socket.getPeerCertificate != null ? "s" : "") + "://" + req.headers.host + req.url)
+                    if (config.enforceHost && (url.hostname != new URL(config.host).hostname || url.port != new URL(config.host).port || url.protocol != new URL(config.host).protocol)) {
+                        res.statusCode = 403
+                        res.statusMessage = "Forbidden"
+                        res.end()
+
+                        return
+                    }
+
                     var headers = [
                         { key: "Access-Control-Allow-Origin", value: new URL(config.host).hostname },
                         { key: "Access-Control-Allow-Methods", value: "GET" },
@@ -78,43 +90,47 @@ module.exports = class Server {
 
                     connection.data.authenticated = false
 
-                    connection.on("packet", data => {
+                    connection.on("packet", async data => {
                         var message
                         try {
-                            message = Packet.decode(data)
+                            message = await Packet.decode(data)
                         } catch (err) {
-                            connection.emit("packet", new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.InvalidPacket, message: "Could not parse packet" }).encode())
+                            connection.emit("packet", await new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.InvalidPacket, message: "Could not parse packet" }).encode())
 
                             return
                         }
 
                         if (message.type == Packet.Type.ConnectionRequested) {
                             if (config.authentication.enabled) {
-                                connection.emit("packet", new Packet(Packet.Type.AuthRequired, { useUsername: config.authentication.useUsername }).encode())
+                                connection.emit("packet", await new Packet(Packet.Type.AuthRequired, { useUsername: config.authentication.useUsername }).encode())
                             } else {
                                 connection.data.authenticated = true
 
-                                connection.emit("packet", new Packet(Packet.Type.ConnectionAccepted, {}).encode())
+                                connection.emit("packet", await new Packet(Packet.Type.ConnectionAccepted, {}).encode())
                             }
                         } else if (message.type == Packet.Type.AuthAttempt) {
                             if (config.authentication.enabled) {
                                 if (!connection.data.authenticated) {
                                     if ((!config.authentication.useUsername || message.data.username == config.authentication.username) && message.data.password == config.authentication.password) {
+                                        console.log("Successfully authentication from " + connection.conn.remoteAddress)
+
                                         connection.data.authenticated = true
 
-                                        connection.emit("packet", new Packet(Packet.Type.ConnectionAccepted, {}).encode())
+                                        connection.emit("packet", await new Packet(Packet.Type.ConnectionAccepted, {}).encode())
                                     } else {
-                                        connection.emit("packet", new Packet(Packet.Type.InvalidCredentials, {}).encode())
+                                        console.log("Invalid authentication from " + connection.conn.remoteAddress)
+
+                                        connection.emit("packet", await new Packet(Packet.Type.InvalidCredentials, {}).encode())
                                     }
                                 } else {
-                                    connection.emit("packet", new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.AlreadyAuthed, message: "You are already authenticated" }).encode())
+                                    connection.emit("packet", await new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.AlreadyAuthed, message: "You are already authenticated" }).encode())
                                 }
                             } else {
-                                connection.emit("packet", new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.AuthNotEnabled, message: "Auth is not enabled" }).encode())
+                                connection.emit("packet", await new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.AuthNotEnabled, message: "Auth is not enabled" }).encode())
                             }
                         } else if (message.type == Packet.Type.RequestDisplays) {
                             if (connection.data.authenticated) {
-                                screenshot.listDisplays().then(displays => {
+                                screenshot.listDisplays().then(async displays => {
                                     var displaydata = []
                                     var index = 0
                                     displays.forEach(display => {
@@ -122,32 +138,33 @@ module.exports = class Server {
                                         index++
                                     })
 
-                                    connection.emit("packet", new Packet(Packet.Type.Displays, displaydata).encode())
+                                    connection.emit("packet", await new Packet(Packet.Type.Displays, displaydata).encode())
                                 })
                             } else {
-                                connection.emit("packet", new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.NotAuthed, message: "You are not authenticated" }).encode())
+                                connection.emit("packet", await new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.NotAuthed, message: "You are not authenticated" }).encode())
                             }
                         } else if (message.type == Packet.Type.RequestDisplay) {
                             if (connection.data.authenticated) {
                                 // TODO Check max scale & fps
 
-                                screenshot.listDisplays().then(displays => {
-                                    if (displays[message.data.id] != null) {
-                                        screenshot({ screen: displays[message.data.id].id, format: "jpg" }).then(image => {
+                                screenshot.listDisplays().then(async displays => {
+                                    var display = displays[message.data.id]
+                                    if (display != null) {
+                                        screenshot({ screen: display.id, format: "jpg" }).then(async image => {
                                             var image = sharp(image)
 
-                                            image.metadata().then(({ width, height }) => {
-                                                image.webp({ quality: message.data.quality, alphaQuality: 0, reductionEffort: 6 }).resize(Math.round(width * message.data.scale), Math.round(height * message.data.scale)).composite([{ input: mouse, left: Math.round(robot.getMousePos().x * message.data.scale), top: Math.round(robot.getMousePos().y * message.data.scale) }]).removeAlpha().toBuffer().then(image => {
-                                                    connection.emit("packet", new Packet(Packet.Type.Display, { id: message.data.id, size: { width: width, height: height }, image }).encode())
+                                            image.metadata().then(async ({ width, height }) => {
+                                                image.webp({ quality: message.data.quality, alphaQuality: 0, reductionEffort: 6 }).resize(Math.round(width * message.data.scale), Math.round(height * message.data.scale)).composite([{ input: mouse, left: Math.round(robot.getMousePos().x * message.data.scale) - display.left, top: Math.round(robot.getMousePos().y * message.data.scale) - display.top }]).removeAlpha().toBuffer().then(async image => {
+                                                    connection.emit("packet", await new Packet(Packet.Type.Display, { id: message.data.id, size: { width: width, height: height }, image }).encode())
                                                 })
                                             })
                                         })
                                     } else {
-                                        connection.emit("packet", new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.UnknownDisplay, message: "Unknown display \"" + message.type + "\"" }).encode())
+                                        connection.emit("packet", await new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.UnknownDisplay, message: "Unknown display \"" + message.type + "\"" }).encode())
                                     }
                                 })
                             } else {
-                                connection.emit("packet", new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.NotAuthed, message: "You are not authenticated" }).encode())
+                                connection.emit("packet", await new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.NotAuthed, message: "You are not authenticated" }).encode())
                             }
                         } else if (message.type == Packet.Type.Control.Packet) {
                             if (connection.data.authenticated) {
@@ -155,7 +172,7 @@ module.exports = class Server {
                                     // TODO Check x and y to screen bounds
                                     robot.moveMouse(message.data.data.x, message.data.data.y)
                                 } else if (message.data.type == Packet.Type.Control.Type.MouseScroll) {
-                                    robot.scrollMouse(message.data.data.x, message.data.data.y)
+                                    robot.scrollMouse(-message.data.data.x, -message.data.data.y)
                                 } else if (message.data.type == Packet.Type.Control.Type.MouseClick.Packet) {
                                     robot.mouseClick(message.data.data.type, false)
                                 } else if (message.data.type == Packet.Type.Control.Type.KeyPress) {
@@ -169,10 +186,10 @@ module.exports = class Server {
                                     robot.keyTap(message.data.data.key, modifiers)
                                 }
                             } else {
-                                connection.emit("packet", new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.NotAuthed, message: "You are not authenticated" }).encode())
+                                connection.emit("packet", await new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.NotAuthed, message: "You are not authenticated" }).encode())
                             }
                         } else {
-                            connection.emit("packet", new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.UnknownPacket, message: "Unknown packet type \"" + message.type + "\"" }).encode())
+                            connection.emit("packet", await new Packet(Packet.Type.Error.Packet, { type: Packet.Type.Error.Type.UnknownPacket, message: "Unknown packet type \"" + message.type + "\"" }).encode())
                         }
                     })
 

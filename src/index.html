@@ -8,10 +8,56 @@
         body {
             margin: 0;
             padding: 0;
+
+            background: #666666;
         }
 
         img {
             float: left;
+        }
+
+        #authContainer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+
+            margin: 0px;
+            padding: 20px 16px 16px 16px;
+
+            background: #777777;
+            border: 2px solid #555555;
+            border-radius: 14px;
+        }
+
+        #authContainer>#authTitle {
+            margin: 0px 0px 12px 0px;
+
+            font-size: 32px;
+
+            font-weight: bold;
+        }
+
+        #authContainer>#usernameContainer,
+        #authContainer>#passwordContainer {
+            margin: 2px 0px;
+        }
+
+        #authContainer>#usernameContainer>#usernameLabel,
+        #authContainer>#passwordContainer>#passwordLabel {
+            margin: 0px;
+
+            font-size: 18px;
+        }
+
+        #authContainer>#login {
+            margin: 8px 0px 0px 0px;
+        }
+
+        #authContainer>#error {
+            color: #ff0000;
+
+            margin: 8px 0px 0px 0px;
         }
 
         .hidden {
@@ -22,19 +68,21 @@
 
 <body>
     <div id="authContainer" class="hidden">
+        <p id="authTitle">Login</p>
+
         <div id="usernameContainer" class="hidden">
-            <label for="username">Username: </label>
+            <label id="usernameLabel" for="username">Username: </label>
             <input id="username" type="text">
         </div>
 
         <div id="passwordContainer">
-            <label for="password">Password: </label>
-            <input id="password" type="text">
+            <label id="passwordLabel" for="password">Password: </label>
+            <input id="password" type="password">
         </div>
 
         <button id="login" type="button">Login</button>
 
-        <p id="error"></p>
+        <p id="error" class="hidden"></p>
     </div>
 
     <div id="displays"></div>
@@ -45,17 +93,17 @@
         var settings = {
             fps: 10,
             fixedFps: false,
-            pps: 3,
+            pps: 5,
             scale: 1,
             quality: 75
         }
 
-        const socket = io()
+        const socket = io({ transports: ["websocket"] })
 
-        socket.on("packet", data => {
+        socket.on("packet", async data => {
             var message
             try {
-                message = Packet.decode(data)
+                message = await Packet.decode(data)
             } catch (err) {
                 console.error("Could not parse packet")
 
@@ -65,7 +113,7 @@
             if (message.type == Packet.Type.ConnectionAccepted) {
                 document.getElementById("authContainer").classList.add("hidden")
 
-                document.addEventListener("mousedown", event => {
+                document.addEventListener("mousedown", async event => {
                     if (event.target.id.includes("display")) {
                         event.stopImmediatePropagation()
                         event.preventDefault()
@@ -74,7 +122,7 @@
                         else if (event.button == 1) var button = "Middle"
                         else if (event.button == 2) var button = "Right"
 
-                        socket.emit("packet", new Packet(Packet.Type.Control.Packet, { type: Packet.Type.Control.Type.MouseClick.Packet, data: { type: Packet.Type.Control.Type.MouseClick.Type[button] } }).encode())
+                        socket.emit("packet", await new Packet(Packet.Type.Control.Packet, { type: Packet.Type.Control.Type.MouseClick.Packet, data: { type: Packet.Type.Control.Type.MouseClick.Type[button] } }).encode())
                     }
                 })
 
@@ -95,11 +143,11 @@
                     if (event.target.id.includes("display")) {
                         var pos = { x: event.pageX - event.target.x, y: event.pageY - event.target.y }
 
-                        pos.x = pos.x / (event.target.width / JSON.parse(event.target.getAttribute("displayAttributes")).width)
-                        pos.y = pos.y / (event.target.height / JSON.parse(event.target.getAttribute("displayAttributes")).height)
+                        pos.x = pos.x / (event.target.width / JSON.parse(event.target.getAttribute("displayAttributes")).size.width)
+                        pos.y = pos.y / (event.target.height / JSON.parse(event.target.getAttribute("displayAttributes")).size.height)
 
-                        mouseX = pos.x
-                        mouseY = pos.y
+                        mouseX = pos.x + JSON.parse(event.target.getAttribute("displayAttributes")).pos.x
+                        mouseY = pos.y + JSON.parse(event.target.getAttribute("displayAttributes")).pos.y
                     }
                 })
 
@@ -110,23 +158,23 @@
                     }
                 })
 
-                setInterval(() => {
+                setInterval(async () => {
                     if (mouseX != -1 && mouseY != -1) {
-                        socket.emit("packet", new Packet(Packet.Type.Control.Packet, { type: Packet.Type.Control.Type.MouseMove, data: { x: Math.round(mouseX), y: Math.round(mouseY) } }).encode())
+                        socket.emit("packet", await new Packet(Packet.Type.Control.Packet, { type: Packet.Type.Control.Type.MouseMove, data: { x: Math.round(mouseX), y: Math.round(mouseY) } }).encode())
 
                         mouseX = -1
                         mouseY = -1
                     }
 
-                    if (mouseScrollX != 0 && mouseScrollY != 0) {
-                        socket.emit("packet", new Packet(Packet.Type.Control.Packet, { type: Packet.Type.Control.Type.MouseScroll, data: { x: Math.round(mouseScrollX), y: Math.round(mouseScrollY) } }).encode())
+                    if (mouseScrollX != 0 || mouseScrollY != 0) {
+                        socket.emit("packet", await new Packet(Packet.Type.Control.Packet, { type: Packet.Type.Control.Type.MouseScroll, data: { x: Math.round(mouseScrollX), y: Math.round(mouseScrollY) } }).encode())
 
                         mouseScrollX = 0
                         mouseScrollY = 0
                     }
                 }, 1000 / settings.pps)
 
-                document.addEventListener("keydown", event => {
+                document.addEventListener("keydown", async event => {
                     event.stopImmediatePropagation()
                     event.preventDefault()
 
@@ -261,25 +309,25 @@
                     var key = keys[event.code]
                     if (key == undefined) return console.warn("Unknown Key " + event.code)
 
-                    socket.emit("packet", new Packet(Packet.Type.Control.Packet, { type: Packet.Type.Control.Type.KeyPress, data: { key, modifiers: { shift: event.shiftKey, control: event.ctrlKey, alt: event.altKey, command: event.metaKey } } }).encode())
+                    socket.emit("packet", await new Packet(Packet.Type.Control.Packet, { type: Packet.Type.Control.Type.KeyPress, data: { key, modifiers: { shift: event.shiftKey, control: event.ctrlKey, alt: event.altKey, command: event.metaKey } } }).encode())
                 })
 
-                socket.emit("packet", new Packet(Packet.Type.RequestDisplays, {}).encode())
+                socket.emit("packet", await new Packet(Packet.Type.RequestDisplays, {}).encode())
             } else if (message.type == Packet.Type.Displays) {
-                message.data.forEach(display => {
+                message.data.forEach(async display => {
                     if (document.getElementById("display" + display.id) == null) {
                         var image = document.createElement("img")
                         image.id = "display" + display.id
                         image.width = window.innerWidth / message.data.length
-                        image.setAttribute("displayAttributes", JSON.stringify({ id: display.id, width: display.size.width, height: display.size.height }))
+                        image.setAttribute("displayAttributes", JSON.stringify(display))
                         document.getElementById("displays").appendChild(image)
 
                         if (settings.fixedFps) {
-                            setInterval(() => {
-                                socket.emit("packet", new Packet(Packet.Type.RequestDisplay, { id: display.id, scale: settings.scale, quality: settings.quality }).encode())
+                            setInterval(async () => {
+                                socket.emit("packet", await new Packet(Packet.Type.RequestDisplay, { id: display.id, scale: settings.scale, quality: settings.quality }).encode())
                             }, 1000 / settings.fps)
                         } else {
-                            socket.emit("packet", new Packet(Packet.Type.RequestDisplay, { id: display.id, scale: settings.scale, quality: settings.quality }).encode())
+                            socket.emit("packet", await new Packet(Packet.Type.RequestDisplay, { id: display.id, scale: settings.scale, quality: settings.quality }).encode())
                         }
                     }
                 })
@@ -287,22 +335,32 @@
                 document.getElementById("display" + message.data.id).src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
 
                 if (!settings.fixedFps) {
-                    socket.emit("packet", new Packet(Packet.Type.RequestDisplay, { id: message.data.id, scale: settings.scale, quality: settings.quality }).encode())
+                    socket.emit("packet", await new Packet(Packet.Type.RequestDisplay, { id: message.data.id, scale: settings.scale, quality: settings.quality }).encode())
                 }
             } else if (message.type == Packet.Type.AuthRequired) {
+                document.getElementById("displays").innerHTML = ""
                 document.getElementById("authContainer").classList.remove("hidden")
 
                 if (message.data.useUsername) {
                     document.getElementById("usernameContainer").classList.remove("hidden")
                 }
 
-                document.getElementById("login").addEventListener("click", () => {
-                    document.getElementById("error").innerHTML = ""
+                if (document.getElementById("password").value != "" && (!message.data.useUsername || document.getElementById("password").value != "")) {
+                    document.getElementById("login").click()
+                }
 
-                    socket.emit("packet", new Packet(Packet.Type.AuthAttempt, { username: (message.data.useUsername ? document.getElementById("username").value : null), password: document.getElementById("password").value }).encode())
+                document.getElementById("login").addEventListener("click", async () => {
+                    document.getElementById("error").innerHTML = ""
+                    document.getElementById("error").classList.add("hidden")
+
+                    socket.emit("packet", await new Packet(Packet.Type.AuthAttempt, { username: (message.data.useUsername ? document.getElementById("username").value : null), password: document.getElementById("password").value }).encode())
                 })
             } else if (message.type == Packet.Type.InvalidCredentials) {
                 document.getElementById("error").innerHTML = "Invalid credentials"
+                document.getElementById("error").classList.remove("hidden")
+
+                document.getElementById("username").value = ""
+                document.getElementById("password").value = ""
             } else if (message.type == Packet.Type.Error.Packet) {
                 if (message.data.type == Packet.Type.Error.Type.NotAuthed) {
                     window.location.reload()
@@ -312,7 +370,15 @@
             }
         })
 
-        socket.emit("packet", new Packet(Packet.Type.ConnectionRequested, {}).encode())
+        socket.on("connect", async () => {
+            console.log("Connected to " + socket.io.uri.replace("http", "ws") + socket.io.opts.path)
+
+            socket.emit("packet", await new Packet(Packet.Type.ConnectionRequested, {}).encode())
+        })
+
+        socket.on("disconnect", () => {
+            console.log("Got disconnected from " + socket.io.uri.replace("http", "ws") + socket.io.opts.path)
+        })
     </script>
 </body>
 

@@ -2,6 +2,7 @@ const fs = require("fs")
 
 class Config {
     host = "http://localhost:8080"
+    enforceHost = false
 
     https = {
         enabled: false,
@@ -45,6 +46,7 @@ class Config {
         }
 
         this.host = config.host || this.host
+        this.enforceHost = config.enforceHost || this.enforceHost
 
         this.https = config.https || this.https
 

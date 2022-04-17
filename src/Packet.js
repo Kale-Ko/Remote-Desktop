@@ -1,9 +1,3 @@
-if (this.window) var window = this.window
-else if (module) var window = undefined
-
-if (window) var zlib = null
-else if (module) var zlib = require("zlib")
-
 class Packet {
     static Type = {
         ConnectionRequested: 0,
@@ -44,9 +38,6 @@ class Packet {
         }
     }
 
-    static compress = false
-    static encoding = "gzip"
-
     type
     data
 
@@ -59,47 +50,15 @@ class Packet {
     }
 
     async encode() {
-        if (Packet.compress) {
-            if (window) {
-                var data = new TextEncoder().encode(JSON.stringify({ type: this.type, data: this.data }))
-                var cs = new CompressionStream(Packet.encoding)
-                var writer = cs.writable.getWriter()
-                writer.write(data)
-                writer.close()
-                data = await new Response(cs.readable).arrayBuffer()
-                return JSON.stringify(Array.from(new Uint8Array(data)))
-            } else if (module) {
-                var gzip = await zlib.gzipSync(new TextEncoder().encode(JSON.stringify({ x: this.type, y: this.data })))
-                console.log(JSON.stringify(gzip.toJSON().data).length)
-                return JSON.stringify({ x: this.type, y: this.data })
-            }
-        } else {
-            return JSON.stringify({ type: this.type, data: this.data })
-        }
+        return JSON.stringify({ type: this.type, data: this.data })
     }
 
     static async decode(data) {
-        if (Packet.compress) {
-            if (window) {
-                var cs = new DecompressionStream(Packet.encoding)
-                var writer = cs.writable.getWriter()
-                writer.write(new Uint8Array(JSON.parse(data)).buffer)
-                writer.close()
-                data = await new Response(cs.readable).text()
-                data = JSON.parse(data)
+        data = JSON.parse(data)
 
-                return new Packet(data.type, data.data)
-            } else if (module) {
-                var data = await zlib.unzipSync(Buffer.from(JSON.parse(data)))
-                data = JSON.parse(data)
-                return new Packet(data.type, data.data)
-            }
-        } else {
-            data = JSON.parse(data)
-            return new Packet(data.type, data.data)
-        }
+        return new Packet(data.type, data.data)
     }
 }
 
-if (window) window.Packet = Packet
+if (this.window) window.Packet = Packet
 else if (module) module.exports = Packet

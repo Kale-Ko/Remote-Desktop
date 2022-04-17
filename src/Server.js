@@ -1,20 +1,24 @@
 const fs = require("fs")
+const express = require("express")
 const http = require("http")
 const https = require("https")
 const io = require("socket.io")
+const compression = require("compression")
 const Packet = require("./Packet.js")
-const robot = require("robotjs")
 const sharp = require("sharp")
 const screenshot = require("screenshot-desktop")
+const robot = require("robotjs")
 
 module.exports = class Server {
     config
 
+    app
     server
+
     socket
 
     constructor(config) {
-        if (config == undefined || config == null) throw new Error('Missing paramiter "config"')
+        if (config == undefined || config == null) throw new Error("Missing paramiter \"config\"")
 
         this.config = config
 
@@ -25,7 +29,10 @@ module.exports = class Server {
 
         mouse.metadata().then(({ width, height }) => {
             mouse.webp({ quality: 100, alphaQuality: 0, reductionEffort: 6 }).resize(Math.round(width * 0.5), Math.round(height * 0.5)).toBuffer().then(mouse => {
-                var listener = (req, res) => {
+                this.app = express()
+                this.app.use(compression({ level: 7, memLevel: 9 }))
+
+                this.app.get("*", (req, res) => {
                     var url = new URL("http" + (req.socket.getPeerCertificate != null ? "s" : "") + "://" + req.headers.host + req.url)
                     if (config.enforceHost && (url.hostname != new URL(config.host).hostname || url.port != new URL(config.host).port || url.protocol != new URL(config.host).protocol)) {
                         res.statusCode = 403
@@ -43,49 +50,49 @@ module.exports = class Server {
                         { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
                         { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
                         { key: "X-Frame-Options", value: "DENY" },
-                        { key: "Content-Encoding", value: "utf-8" },
                         { key: "Cache-Control", value: "no-store" }
                     ]
 
-                    if (req.url == "/") {
+                    if (url.pathname == "/") {
                         res.statusCode = 200
                         res.statusMessage = "Ok"
                         headers.forEach(header => { res.setHeader(header.key, header.value) })
-                        res.setHeader("Content-Type", "text/html; charset=utf-8")
+                        res.setHeader("Content-Type", "text/html")
                         res.end(fs.readFileSync("./src/index.html"))
-                    } else if (req.url == "/Packet.js") {
+                    } else if (url.pathname == "/Packet.js") {
                         res.statusCode = 200
                         res.statusMessage = "Ok"
                         headers.forEach(header => { res.setHeader(header.key, header.value) })
-                        res.setHeader("Content-Type", "text/javascript; charset=utf-8")
+                        res.setHeader("Content-Type", "text/javascript")
                         res.end(fs.readFileSync("./src/Packet.js"))
-                    } else if (req.url == "/Config.js") {
+                    } else if (url.pathname == "/Config.js") {
                         res.statusCode = 200
                         res.statusMessage = "Ok"
                         headers.forEach(header => { res.setHeader(header.key, header.value) })
-                        res.setHeader("Content-Type", "text/javascript; charset=utf-8")
+                        res.setHeader("Content-Type", "text/javascript")
                         res.end(fs.readFileSync("./src/Config.js"))
                     } else {
                         res.statusCode = 404
                         res.statusMessage = "Not Found"
                         headers.forEach(header => { res.setHeader(header.key, header.value) })
-                        res.setHeader("Content-Type", "text/plain; charset=utf-8")
+                        res.setHeader("Content-Type", "text/plain")
                         res.end("404 Not Found")
                     }
-                }
+                })
 
                 if (config.https.enabled) {
                     this.server = https.createServer({
                         key: fs.readFileSync(config.https.cert.private),
                         cert: fs.readFileSync(config.https.cert.public)
-                    }, listener)
+                    }, this.app)
                 } else {
-                    this.server = http.createServer(listener)
+                    this.server = http.createServer(this.app)
                 }
 
-                var socket = new io.Server(this.server)
+                this.socket = new io.Server(this.server)
+                this.socket.use((socket, next) => compression({ level: 7, memLevel: 9 })(socket.request, {}, next))
 
-                socket.on("connection", connection => {
+                this.socket.on("connection", connection => {
                     console.log("Received connection from " + connection.conn.remoteAddress)
 
                     connection.data.authenticated = false
@@ -145,7 +152,11 @@ module.exports = class Server {
                             }
                         } else if (message.type == Packet.Type.RequestDisplay) {
                             if (connection.data.authenticated) {
-                                // TODO Check max scale & fps
+                                if (message.data.scale >= config.stream.maxFps) {
+                                    message.data.scale = config.stream.maxFps
+                                }
+
+                                // TODO Check max fps
 
                                 screenshot.listDisplays().then(async displays => {
                                     var display = displays[message.data.id]
@@ -169,8 +180,20 @@ module.exports = class Server {
                         } else if (message.type == Packet.Type.Control.Packet) {
                             if (connection.data.authenticated) {
                                 if (message.data.type == Packet.Type.Control.Type.MouseMove) {
-                                    // TODO Check x and y to screen bounds
-                                    robot.moveMouse(message.data.data.x, message.data.data.y)
+                                    screenshot.listDisplays().then(async displays => {
+                                        var bounds = { left: 0, right: 0, top: 0, bottom: 0 }
+
+                                        displays.forEach(display => {
+                                            if (display.left <= bounds.left) bounds.left = display.left
+                                            if (display.top <= bounds.top) bounds.top = display.top
+                                            if (display.right >= bounds.right) bounds.right = display.right
+                                            if (display.bottom >= bounds.bottom) bounds.bottom = display.bottom
+                                        })
+
+                                        if (message.data.data.x >= bounds.left && message.data.data.x <= bounds.right && message.data.data.y >= bounds.top && message.data.data.y <= bounds.bottom) {
+                                            robot.moveMouse(message.data.data.x, message.data.data.y)
+                                        }
+                                    })
                                 } else if (message.data.type == Packet.Type.Control.Type.MouseScroll) {
                                     robot.scrollMouse(-message.data.data.x, -message.data.data.y)
                                 } else if (message.data.type == Packet.Type.Control.Type.MouseClick.Packet) {
@@ -194,6 +217,8 @@ module.exports = class Server {
                     })
 
                     connection.on("disconnect", () => {
+                        connection.data.authenticated = false
+
                         console.log("Lost connection to " + connection.conn.remoteAddress)
                     })
                 })

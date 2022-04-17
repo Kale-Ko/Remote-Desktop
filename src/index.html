@@ -94,8 +94,14 @@
             fps: 10,
             fixedFps: false,
             pps: 5,
-            scale: 1,
-            quality: 75
+            scale: 0.75,
+            quality: 50
+        }
+
+        if (localStorage.getItem("settings") == null) {
+            localStorage.setItem("settings", JSON.stringify(settings))
+        } else {
+            settings = JSON.parse(localStorage.getItem("settings"))
         }
 
         const socket = io({ transports: ["websocket"] })
@@ -312,6 +318,12 @@
                     socket.emit("packet", await new Packet(Packet.Type.Control.Packet, { type: Packet.Type.Control.Type.KeyPress, data: { key, modifiers: { shift: event.shiftKey, control: event.ctrlKey, alt: event.altKey, command: event.metaKey } } }).encode())
                 })
 
+                window.addEventListener("resize", async event => {
+                    document.getElementById("displays").innerHTML = ""
+
+                    socket.emit("packet", await new Packet(Packet.Type.RequestDisplays, {}).encode())
+                })
+
                 socket.emit("packet", await new Packet(Packet.Type.RequestDisplays, {}).encode())
             } else if (message.type == Packet.Type.Displays) {
                 message.data.forEach(async display => {
@@ -332,13 +344,16 @@
                     }
                 })
             } else if (message.type == Packet.Type.Display) {
-                document.getElementById("display" + message.data.id).src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
+                if (document.getElementById("display" + message.data.id) != null) {
+                    document.getElementById("display" + message.data.id).src = URL.createObjectURL(new Blob([new Uint8Array(message.data.image.data)], { type: "image/webp" }))
 
-                if (!settings.fixedFps) {
-                    socket.emit("packet", await new Packet(Packet.Type.RequestDisplay, { id: message.data.id, scale: settings.scale, quality: settings.quality }).encode())
+                    if (!settings.fixedFps) {
+                        socket.emit("packet", await new Packet(Packet.Type.RequestDisplay, { id: message.data.id, scale: settings.scale, quality: settings.quality }).encode())
+                    }
                 }
             } else if (message.type == Packet.Type.AuthRequired) {
                 document.getElementById("displays").innerHTML = ""
+                document.getElementById("login").disabled = false
                 document.getElementById("authContainer").classList.remove("hidden")
 
                 if (message.data.useUsername) {
@@ -350,23 +365,23 @@
                 }
 
                 document.getElementById("login").addEventListener("click", async () => {
+                    document.getElementById("login").disabled = true
+
                     document.getElementById("error").innerHTML = ""
                     document.getElementById("error").classList.add("hidden")
 
                     socket.emit("packet", await new Packet(Packet.Type.AuthAttempt, { username: (message.data.useUsername ? document.getElementById("username").value : null), password: document.getElementById("password").value }).encode())
                 })
             } else if (message.type == Packet.Type.InvalidCredentials) {
+                document.getElementById("login").disabled = false
+
                 document.getElementById("error").innerHTML = "Invalid credentials"
                 document.getElementById("error").classList.remove("hidden")
 
                 document.getElementById("username").value = ""
                 document.getElementById("password").value = ""
             } else if (message.type == Packet.Type.Error.Packet) {
-                if (message.data.type == Packet.Type.Error.Type.NotAuthed) {
-                    window.location.reload()
-                } else {
-                    console.error("Error from server: ", message.data.message)
-                }
+                console.error("Error from server: ", message.data.message)
             }
         })
 

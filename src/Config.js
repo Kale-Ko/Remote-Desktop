@@ -6,7 +6,6 @@ class Config {
 
     https = {
         enabled: false,
-        host: "http://localhost:8433",
         cert: {
             public: null,
             private: null
